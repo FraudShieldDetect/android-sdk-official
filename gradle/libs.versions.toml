@@ -31,16 +31,18 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 
+
 [bundles]
 compose = [
     "compose-ui",
-    "compose-ui-graphics", 
+    "compose-ui-graphics",
     "compose-ui-tooling-preview",
     "compose-material3"
 ]

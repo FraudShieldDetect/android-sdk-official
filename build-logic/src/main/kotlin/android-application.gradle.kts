@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -8,8 +8,8 @@ android {
 
     defaultConfig {
         applicationId = "com.protosdk.demo"
-        minSdk = libs.versions.minSdk.get().toInt()
-        targetSdk = libs.versions.targetSdk.get().toInt()
+        minSdk = 21
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -56,16 +56,16 @@ android {
 dependencies {
     implementation(project(":protosdk"))
     
-    implementation(libs.androidx.core)
-    implementation(libs.androidx.lifecycle.runtime)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.compose.bom))
-    implementation(libs.compose.ui)
-    implementation(libs.compose.ui.graphics)
-    implementation(libs.compose.ui.tooling.preview)
-    implementation(libs.compose.material3)
-    implementation(libs.gson)
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("com.google.code.gson:gson:2.11.0")
     
-    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
