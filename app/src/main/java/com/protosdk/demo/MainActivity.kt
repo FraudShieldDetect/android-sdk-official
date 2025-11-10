@@ -64,6 +64,9 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                                             appendLine()
                                             appendLine("=== Build Information ===")
                                             appendLine(result.data.buildInfo.toString(2))
+                                            appendLine()
+                                            appendLine("=== Device Information ===")
+                                            appendLine(result.data.deviceInfo.toString(2))
                                         }
                                     } else {
                                         "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"
