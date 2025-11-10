@@ -1,0 +1,46 @@
+[versions]
+compileSdk = "35"
+minSdk = "24"
+targetSdk = "35"
+
+agp = "8.13.0"
+kotlin = "2.2.21"
+compose-bom = "2025.08.00"
+
+androidx-core = "1.13.1"
+androidx-lifecycle = "2.8.7"
+androidx-activity-compose = "1.9.3"
+androidx-appcompat = "1.7.0"
+
+gson = "2.11.0"
+kotlinx-coroutines = "1.9.0"
+
+[libraries]
+androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
+androidx-lifecycle-runtime = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+[bundles]
+compose = [
+    "compose-ui",
+    "compose-ui-graphics", 
+    "compose-ui-tooling-preview",
+    "compose-material3"
+]
