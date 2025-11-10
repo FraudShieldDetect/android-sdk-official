@@ -12,12 +12,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-        
+
         aarMetadata {
             minCompileSdk = 35
         }
-        
-        
     }
 
     buildTypes {
@@ -25,29 +23,27 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    
+
     kotlin {
         jvmToolchain(8)
     }
-    
-    
-    
+
     publishing {
         singleVariant("release") {
             withSourcesJar()
             withJavadocJar()
         }
     }
-    
+
     lint {
         baseline = file("lint-baseline.xml")
     }
