@@ -1,21 +1,21 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
     namespace = "com.protosdk.sdk"
-    compileSdk = libs.versions.compileSdk.get().toInt()
+    compileSdk = 35
 
     defaultConfig {
-        minSdk = libs.versions.minSdk.get().toInt()
-        targetSdk = libs.versions.targetSdk.get().toInt()
+        minSdk = 21
+        targetSdk = 35
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
         
         aarMetadata {
-            minCompileSdk = libs.versions.compileSdk.get().toInt()
+            minCompileSdk = 35
         }
         
         externalNativeBuild {
@@ -64,7 +64,7 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.core)
-    implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.gson)
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+    implementation("com.google.code.gson:gson:2.11.0")
 }
