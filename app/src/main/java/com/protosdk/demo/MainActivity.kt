@@ -60,6 +60,7 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                                             appendLine(
                                                     "Collection Time: ${result.collectionTimeMs}ms"
                                             )
+                                            appendLine("JSON Size: ${result.data.getJsonSize()} bytes")
                                             appendLine()
                                             appendLine("=== Build Information ===")
                                             appendLine(result.data.buildInfo.toString(2))

@@ -149,13 +149,22 @@ private constructor(
     val results = deferredResults.awaitAll()
 
     // Build fingerprint data
-    return FingerprintData().apply {
+    val fingerprintData = FingerprintData().apply {
       results.forEach { (name, data) ->
         when (name) {
           "buildInfo" -> buildInfo = data
         }
       }
     }
+    
+    // Validate JSON size before returning
+    try {
+      fingerprintData.getJsonSize()
+    } catch (e: IllegalStateException) {
+      throw IllegalStateException("Fingerprint data too large: ${e.message}")
+    }
+    
+    return fingerprintData
   }
 
   /** Collects specific collector data */
