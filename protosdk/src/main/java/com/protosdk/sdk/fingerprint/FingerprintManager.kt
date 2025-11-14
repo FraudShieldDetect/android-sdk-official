@@ -2,6 +2,7 @@ package com.protosdk.sdk.fingerprint
 
 import android.content.Context
 import com.protosdk.sdk.fingerprint.collectors.BuildInfoCollector
+import com.protosdk.sdk.fingerprint.collectors.DeviceInfoCollector
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -37,14 +38,15 @@ private constructor(
     initializeCollectors()
   }
 
-  private fun initializeCollectors() {
-    if (isInitialized) return
+    private fun initializeCollectors() {
+        if (isInitialized) return
 
-    // Initialize only the BuildInfoCollector for now
-    collectors["buildInfo"] = BuildInfoCollector()
+        // Initialize collectors
+        collectors["buildInfo"] = BuildInfoCollector()
+        collectors["deviceInfo"] = DeviceInfoCollector()
 
-    isInitialized = true
-  }
+        isInitialized = true
+    }
 
   /** Collects fingerprint data asynchronously without blocking the main thread */
   suspend fun collectFingerprintAsync(): FingerprintResult {
@@ -149,13 +151,23 @@ private constructor(
     val results = deferredResults.awaitAll()
 
     // Build fingerprint data
-    return FingerprintData().apply {
+    val fingerprintData = FingerprintData().apply {
       results.forEach { (name, data) ->
         when (name) {
           "buildInfo" -> buildInfo = data
+          "deviceInfo" -> deviceInfo = data
         }
       }
     }
+    
+    // Validate JSON size before returning
+    try {
+      fingerprintData.getJsonSize()
+    } catch (e: IllegalStateException) {
+      throw IllegalStateException("Fingerprint data too large: ${e.message}")
+    }
+    
+    return fingerprintData
   }
 
   /** Collects specific collector data */
