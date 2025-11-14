@@ -3,6 +3,7 @@ package com.protosdk.sdk.fingerprint
 import android.content.Context
 import com.protosdk.sdk.fingerprint.collectors.BuildInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DeviceInfoCollector
+import com.protosdk.sdk.fingerprint.collectors.DisplayInfoCollector
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -44,6 +45,7 @@ private constructor(
         // Initialize collectors
         collectors["buildInfo"] = BuildInfoCollector()
         collectors["deviceInfo"] = DeviceInfoCollector()
+        collectors["displayInfo"] = DisplayInfoCollector()
 
         isInitialized = true
     }
@@ -156,6 +158,7 @@ private constructor(
         when (name) {
           "buildInfo" -> buildInfo = data
           "deviceInfo" -> deviceInfo = data
+          "displayInfo" -> displayInfo = data
         }
       }
     }
