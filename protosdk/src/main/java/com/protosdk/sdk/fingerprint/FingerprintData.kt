@@ -5,12 +5,14 @@ import org.json.JSONObject
 data class FingerprintData(
         var buildInfo: JSONObject = JSONObject(),
         var deviceInfo: JSONObject = JSONObject(),
+        var displayInfo: JSONObject = JSONObject(),
         var timestamp: Long = System.currentTimeMillis(),
 ) {
     fun toJson(): JSONObject {
         val json = JSONObject().apply { 
             put("build", buildInfo)
             put("device", deviceInfo)
+            put("display", displayInfo)
         }
         
         // Check JSON size (in bytes)
@@ -29,6 +31,7 @@ data class FingerprintData(
         val json = JSONObject().apply {
             put("build", buildInfo)
             put("device", deviceInfo)
+            put("display", displayInfo)
             put("timestamp", timestamp)
         }
         
