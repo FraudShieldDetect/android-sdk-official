@@ -2,7 +2,7 @@ package com.protosdk.sdk.fingerprint.collectors
 
 import android.content.Context
 import android.provider.Settings
-import com.protosdk.sdk.fingerprint.BaseCollector
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import org.json.JSONObject
 
 class DeviceInfoCollector : BaseCollector() {

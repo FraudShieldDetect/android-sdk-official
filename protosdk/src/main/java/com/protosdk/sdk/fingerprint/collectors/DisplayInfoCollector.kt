@@ -8,34 +8,32 @@ import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
 import android.view.WindowMetrics
-import com.protosdk.sdk.fingerprint.BaseCollector
-import kotlin.math.roundToInt
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.math.roundToInt
 
 class DisplayInfoCollector : BaseCollector() {
 
-  override suspend fun collect(context: Context): JSONObject {
-    return safeCollect {
-      val configuration = context.resources.configuration
-      val resourceMetrics = context.resources.displayMetrics
-      val displayManager = context.getSystemService(DisplayManager::class.java)
-      val windowManager = context.getSystemService(WindowManager::class.java)
-      val display = resolveDisplay(context, displayManager)
+  override suspend fun collect(context: Context): JSONObject = safeCollect {
+    val configuration = context.resources.configuration
+    val resourceMetrics = context.resources.displayMetrics
+    val displayManager = context.getSystemService(DisplayManager::class.java)
+    val windowManager = context.getSystemService(WindowManager::class.java)
+    val display = resolveDisplay(context, displayManager)
 
-      val currentWindowMetrics = getCurrentWindowMetrics(windowManager)
-      val maximumWindowMetrics = getMaximumWindowMetrics(windowManager)
-      val fallbackDensity = resourceMetrics.density.toDouble()
+    val currentWindowMetrics = getCurrentWindowMetrics(windowManager)
+    val maximumWindowMetrics = getMaximumWindowMetrics(windowManager)
+    val fallbackDensity = resourceMetrics.density.toDouble()
 
-      JSONObject().apply {
-        putResourceMetrics(resourceMetrics)
-        putRealMetrics(maximumWindowMetrics, resourceMetrics)
-        putWindowBounds("window", currentWindowMetrics, fallbackDensity)
-        putWindowBounds("maximumWindow", maximumWindowMetrics, fallbackDensity)
-        putSizeMetrics(currentWindowMetrics, maximumWindowMetrics, resourceMetrics)
-        putDisplayDetails(display)
-        putConfiguration(configuration)
-      }
+    JSONObject().apply {
+      putResourceMetrics(resourceMetrics)
+      putRealMetrics(maximumWindowMetrics, resourceMetrics)
+      putWindowBounds("window", currentWindowMetrics, fallbackDensity)
+      putWindowBounds("maximumWindow", maximumWindowMetrics, fallbackDensity)
+      putSizeMetrics(currentWindowMetrics, maximumWindowMetrics, resourceMetrics)
+      putDisplayDetails(display)
+      putConfiguration(configuration)
     }
   }
 
@@ -46,8 +44,8 @@ class DisplayInfoCollector : BaseCollector() {
   override fun hasRequiredPermissions(context: Context): Boolean = true
 
   private fun resolveDisplay(
-          context: Context,
-          displayManager: DisplayManager?,
+    context: Context,
+    displayManager: DisplayManager?,
   ): Display? {
     val defaultDisplay = displayManager?.getDisplay(Display.DEFAULT_DISPLAY)
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -58,29 +56,25 @@ class DisplayInfoCollector : BaseCollector() {
   }
 
   @Suppress("SwallowedException")
-  private fun getCurrentWindowMetrics(windowManager: WindowManager?): WindowMetrics? {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-      try {
-        windowManager?.currentWindowMetrics
-      } catch (ignored: Exception) {
-        null
-      }
-    } else {
+  private fun getCurrentWindowMetrics(windowManager: WindowManager?): WindowMetrics? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    try {
+      windowManager?.currentWindowMetrics
+    } catch (ignored: Exception) {
       null
     }
+  } else {
+    null
   }
 
   @Suppress("SwallowedException")
-  private fun getMaximumWindowMetrics(windowManager: WindowManager?): WindowMetrics? {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-      try {
-        windowManager?.maximumWindowMetrics
-      } catch (ignored: Exception) {
-        null
-      }
-    } else {
+  private fun getMaximumWindowMetrics(windowManager: WindowManager?): WindowMetrics? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    try {
+      windowManager?.maximumWindowMetrics
+    } catch (ignored: Exception) {
       null
     }
+  } else {
+    null
   }
 
   private fun JSONObject.putResourceMetrics(metrics: DisplayMetrics) {
@@ -93,8 +87,8 @@ class DisplayInfoCollector : BaseCollector() {
   }
 
   private fun JSONObject.putRealMetrics(
-          windowMetrics: WindowMetrics?,
-          fallbackMetrics: DisplayMetrics,
+    windowMetrics: WindowMetrics?,
+    fallbackMetrics: DisplayMetrics,
   ) {
     val bounds = windowMetrics?.bounds
     val density = getWindowMetricsDensity(windowMetrics) ?: fallbackMetrics.density.toDouble()
@@ -107,9 +101,9 @@ class DisplayInfoCollector : BaseCollector() {
   }
 
   private fun JSONObject.putSizeMetrics(
-          currentMetrics: WindowMetrics?,
-          maximumMetrics: WindowMetrics?,
-          fallbackMetrics: DisplayMetrics,
+    currentMetrics: WindowMetrics?,
+    maximumMetrics: WindowMetrics?,
+    fallbackMetrics: DisplayMetrics,
   ) {
     val currentBounds = currentMetrics?.bounds
     val maxBounds = maximumMetrics?.bounds
@@ -121,9 +115,9 @@ class DisplayInfoCollector : BaseCollector() {
   }
 
   private fun JSONObject.putWindowBounds(
-          prefix: String,
-          windowMetrics: WindowMetrics?,
-          fallbackDensity: Double,
+    prefix: String,
+    windowMetrics: WindowMetrics?,
+    fallbackDensity: Double,
   ) {
     if (windowMetrics == null) return
     val bounds = windowMetrics.bounds
@@ -187,18 +181,17 @@ class DisplayInfoCollector : BaseCollector() {
       }
       put("locales", localesArray)
     } else {
-      @Suppress("DEPRECATION") val localeValue = configuration.locale.toString()
+      @Suppress("DEPRECATION")
+      val localeValue = configuration.locale.toString()
       put("locale", localeValue)
     }
   }
 
-  private fun getWindowMetricsDensity(windowMetrics: WindowMetrics?): Double? {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                    windowMetrics != null
-    ) {
-      windowMetrics.density.toDouble()
-    } else {
-      null
-    }
+  private fun getWindowMetricsDensity(windowMetrics: WindowMetrics?): Double? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+    windowMetrics != null
+  ) {
+    windowMetrics.density.toDouble()
+  } else {
+    null
   }
 }

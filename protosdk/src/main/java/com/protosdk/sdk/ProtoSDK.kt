@@ -4,6 +4,7 @@ import android.content.Context
 import com.protosdk.sdk.fingerprint.FingerprintData
 import com.protosdk.sdk.fingerprint.FingerprintManager
 import com.protosdk.sdk.fingerprint.FingerprintResult
+import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
 import kotlinx.coroutines.*
 
 /**
@@ -14,35 +15,31 @@ import kotlinx.coroutines.*
  */
 class ProtoSDK
 private constructor(
-        private val context: Context,
-        private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+  private val context: Context,
+  private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) {
   private val fingerprintManager: FingerprintManager =
-          FingerprintManager.createInstance(context, scope)
+    FingerprintManager.createInstance(context, scope)
 
   companion object {
     @Volatile private var INSTANCE: ProtoSDK? = null
 
     /** Gets the singleton instance of ProtoSDK */
-    fun getInstance(context: Context): ProtoSDK {
-      return INSTANCE
-              ?: synchronized(this) {
-                INSTANCE ?: ProtoSDK(context.applicationContext).also { INSTANCE = it }
-              }
-    }
+    fun getInstance(context: Context): ProtoSDK = INSTANCE
+      ?: synchronized(this) {
+        INSTANCE ?: ProtoSDK(context.applicationContext).also { INSTANCE = it }
+      }
 
     /** Creates a new instance with custom scope */
     fun createInstance(
-            context: Context,
-            scope: CoroutineScope,
-    ): ProtoSDK {
-      return ProtoSDK(context.applicationContext, scope)
-    }
+      context: Context,
+      scope: CoroutineScope,
+    ): ProtoSDK = ProtoSDK(context.applicationContext, scope)
 
     /** Initializes the SDK with configuration */
     fun initialize(
-            context: Context,
-            config: ProtoSDKConfig = ProtoSDKConfig(),
+      context: Context,
+      config: ProtoSDKConfig = ProtoSDKConfig(),
     ): ProtoSDK {
       val instance = getInstance(context)
       instance.applyConfig(config)
@@ -58,45 +55,35 @@ private constructor(
    * @param timeoutMs Maximum time to wait for collection (default: 10 seconds)
    * @return FingerprintResult containing the fingerprint data and hash
    */
-  suspend fun collectFingerprint(timeoutMs: Long = 10000): FingerprintResult {
-    return try {
-      if (config.enableTimeout) {
-        fingerprintManager.collectFingerprintWithTimeout(timeoutMs)
-      } else {
-        fingerprintManager.collectFingerprintAsync()
-      }
-    } catch (e: Exception) {
-      FingerprintResult(
-              data = FingerprintData(),
-              fingerprint = "",
-              success = false,
-              error = "Fingerprint collection failed: ${e.message}",
-              collectionTimeMs = 0,
-      )
+  suspend fun collectFingerprint(timeoutMs: Long = 10000): FingerprintResult = try {
+    if (config.enableTimeout) {
+      fingerprintManager.collectFingerprintWithTimeout(timeoutMs)
+    } else {
+      fingerprintManager.collectFingerprintAsync()
     }
+  } catch (e: Exception) {
+    FingerprintResult(
+      data = FingerprintData(),
+      fingerprint = "",
+      success = false,
+      error = "Fingerprint collection failed: ${e.message}",
+      collectionTimeMs = 0,
+    )
   }
-
-
 
   /** Checks if all required permissions are granted */
-  fun hasAllPermissions(): Boolean {
-    return fingerprintManager.hasAllPermissions()
-  }
+  fun hasAllPermissions(): Boolean = fingerprintManager.hasAllPermissions()
 
   /** Gets available collectors */
-  fun getAvailableCollectors(): List<String> {
-    return fingerprintManager.getAvailableCollectors()
-  }
+  fun getAvailableCollectors(): List<String> = fingerprintManager.getAvailableCollectors()
 
   /** Gets collector information */
-  fun getCollectorInfo(collectorName: String): FingerprintManager.CollectorInfo? {
-    return fingerprintManager.getCollectorInfo(collectorName)
-  }
+  fun getCollectorInfo(collectorName: String): FingerprintManager.CollectorInfo? = fingerprintManager.getCollectorInfo(collectorName)
 
   /** Adds custom collector */
   fun addCollector(
-          name: String,
-          collector: com.protosdk.sdk.fingerprint.FingerprintCollector,
+    name: String,
+    collector: FingerprintCollector,
   ) {
     fingerprintManager.addCollector(name, collector)
   }
@@ -119,7 +106,7 @@ private constructor(
 
 /** Configuration class for ProtoSDK */
 data class ProtoSDKConfig(
-        val enableTimeout: Boolean = true,
-        val enableDebugLogging: Boolean = false,
-        val defaultTimeoutMs: Long = 10000,
+  val enableTimeout: Boolean = true,
+  val enableDebugLogging: Boolean = false,
+  val defaultTimeoutMs: Long = 10000,
 )
