@@ -4,6 +4,7 @@ import android.content.Context
 import com.protosdk.sdk.fingerprint.FingerprintData
 import com.protosdk.sdk.fingerprint.FingerprintManager
 import com.protosdk.sdk.fingerprint.FingerprintResult
+import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
 import kotlinx.coroutines.*
 
 /**
@@ -96,7 +97,7 @@ private constructor(
   /** Adds custom collector */
   fun addCollector(
           name: String,
-          collector: com.protosdk.sdk.fingerprint.FingerprintCollector,
+          collector: FingerprintCollector,
   ) {
     fingerprintManager.addCollector(name, collector)
   }

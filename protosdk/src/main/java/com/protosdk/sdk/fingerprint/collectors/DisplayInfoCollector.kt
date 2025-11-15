@@ -8,7 +8,7 @@ import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
 import android.view.WindowMetrics
-import com.protosdk.sdk.fingerprint.BaseCollector
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import kotlin.math.roundToInt
 import org.json.JSONArray
 import org.json.JSONObject

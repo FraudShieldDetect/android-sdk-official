@@ -3,7 +3,7 @@ package com.protosdk.sdk.fingerprint.collectors
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
-import com.protosdk.sdk.fingerprint.BaseCollector
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -61,6 +61,11 @@ class BuildInfoCollector : BaseCollector() {
           put("socManufacturer", Build.SOC_MANUFACTURER)
           put("socModel", Build.SOC_MODEL)
         }
+
+        // Integrity hints derived from build info
+        put("isDebuggable", Build.TYPE == "eng" || Build.TAGS?.contains("debug") == true)
+        put("isReleaseBuild", Build.TYPE == "user")
+        put("hasTestKeys", Build.TAGS?.contains("test-keys") == true)
       }
     }
   }

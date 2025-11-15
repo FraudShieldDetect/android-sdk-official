@@ -1,4 +1,4 @@
-package com.protosdk.sdk.fingerprint
+package com.protosdk.sdk.fingerprint.interfaces
 
 import android.content.Context
 import org.json.JSONObject
