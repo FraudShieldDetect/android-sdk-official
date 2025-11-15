@@ -9,63 +9,56 @@ import org.json.JSONObject
 
 class BuildInfoCollector : BaseCollector() {
   @SuppressLint("HardwareIds")
-  override suspend fun collect(context: Context): JSONObject {
-    return safeCollect {
-      JSONObject().apply {
-        // Basic build information
-        put("board", Build.BOARD)
-        put("bootloader", Build.BOOTLOADER)
-        put("brand", Build.BRAND)
-        put("device", Build.DEVICE)
-        put("display", Build.DISPLAY)
-        put("fingerprint", Build.FINGERPRINT)
-        put("hardware", Build.HARDWARE)
-        put("host", Build.HOST)
-        put("id", Build.ID)
-        put("manufacturer", Build.MANUFACTURER)
-        put("model", Build.MODEL)
-        put("product", Build.PRODUCT)
-        put(
-                "serial",
-                try {
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    Build.getSerial()
-                  } else {
-                    Build.SERIAL
-                  }
-                } catch (e: Exception) {},
-        )
-        put("tags", Build.TAGS)
-        put("time", Build.TIME)
-        put("type", Build.TYPE)
-        put("user", Build.USER)
+  override suspend fun collect(context: Context): JSONObject = safeCollect {
+    JSONObject().apply {
+      // Basic build information
+      put("board", Build.BOARD)
+      put("bootloader", Build.BOOTLOADER)
+      put("brand", Build.BRAND)
+      put("device", Build.DEVICE)
+      put("display", Build.DISPLAY)
+      put("fingerprint", Build.FINGERPRINT)
+      put("hardware", Build.HARDWARE)
+      put("host", Build.HOST)
+      put("id", Build.ID)
+      put("manufacturer", Build.MANUFACTURER)
+      put("model", Build.MODEL)
+      put("product", Build.PRODUCT)
+      put(
+        "serial",
+        try {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Build.getSerial()
+          } else {
+            Build.SERIAL
+          }
+        } catch (e: Exception) {},
+      )
+      put("tags", Build.TAGS)
+      put("time", Build.TIME)
+      put("type", Build.TYPE)
+      put("user", Build.USER)
 
-        // Radio information
-        put("radio", Build.RADIO)
-        put(
-                "radioVersion",
-                try {
-                  Build.getRadioVersion()
-                } catch (e: Exception) {},
-        )
+      // Radio information
+      put("radio", Build.RADIO)
+      put(
+        "radioVersion",
+        try {
+          Build.getRadioVersion()
+        } catch (e: Exception) {},
+      )
 
-        // CPU ABI information
-        put("cpuAbi", Build.CPU_ABI)
-        put("cpuAbi2", Build.CPU_ABI2)
-        put("supportedAbis", JSONArray(Build.SUPPORTED_ABIS.toList()))
-        put("supported32BitAbis", JSONArray(Build.SUPPORTED_32_BIT_ABIS.toList()))
-        put("supported64BitAbis", JSONArray(Build.SUPPORTED_64_BIT_ABIS.toList()))
+      // CPU ABI information
+      put("cpuAbi", Build.CPU_ABI)
+      put("cpuAbi2", Build.CPU_ABI2)
+      put("supportedAbis", JSONArray(Build.SUPPORTED_ABIS.toList()))
+      put("supported32BitAbis", JSONArray(Build.SUPPORTED_32_BIT_ABIS.toList()))
+      put("supported64BitAbis", JSONArray(Build.SUPPORTED_64_BIT_ABIS.toList()))
 
-        // SoC information (API 31+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-          put("socManufacturer", Build.SOC_MANUFACTURER)
-          put("socModel", Build.SOC_MODEL)
-        }
-
-        // Integrity hints derived from build info
-        put("isDebuggable", Build.TYPE == "eng" || Build.TAGS?.contains("debug") == true)
-        put("isReleaseBuild", Build.TYPE == "user")
-        put("hasTestKeys", Build.TAGS?.contains("test-keys") == true)
+      // SoC information (API 31+)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        put("socManufacturer", Build.SOC_MANUFACTURER)
+        put("socModel", Build.SOC_MODEL)
       }
     }
   }
@@ -74,7 +67,5 @@ class BuildInfoCollector : BaseCollector() {
 
   override fun getRequiredPermissions(): List<String> = emptyList()
 
-  override fun hasRequiredPermissions(context: Context): Boolean {
-    return true
-  }
+  override fun hasRequiredPermissions(context: Context): Boolean = true
 }
