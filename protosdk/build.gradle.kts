@@ -1,13 +1,6 @@
 import com.android.build.api.variant.BuildConfigField
-import org.gradle.api.Project
-import java.io.File
-import java.security.MessageDigest
-import java.util.Locale
-import java.util.UUID
-import kotlin.text.Charsets
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.api.DefaultTask
+import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -20,6 +13,13 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.io.File
+import java.security.MessageDigest
+import java.util.Locale
+import java.util.UUID
+import kotlin.text.Charsets
 
 plugins {
   id("com.android.library")
@@ -35,18 +35,18 @@ abstract class ComputeDexHashTask : DefaultTask() {
 
   val hashValue: Provider<String>
     get() =
-        outputFile.map { file ->
-          val target = file.asFile
-          if (target.exists()) target.readText().trim() else ""
-        }
+      outputFile.map { file ->
+        val target = file.asFile
+        if (target.exists()) target.readText().trim() else ""
+      }
 
   @TaskAction
   fun run() {
     val digest = MessageDigest.getInstance("SHA-256")
     val files =
-        sourceFiles.files
-            .filter { it.isFile }
-            .sortedBy { it.relativeToOrNull(project.projectDir)?.path ?: it.absolutePath }
+      sourceFiles.files
+        .filter { it.isFile }
+        .sortedBy { it.relativeToOrNull(project.projectDir)?.path ?: it.absolutePath }
     files.forEach { input ->
       input.inputStream().use { stream ->
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -68,7 +68,7 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
   @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
 
   @get:Input val xorKey: org.gradle.api.provider.Property<String> =
-      project.objects.property(String::class.java)
+    project.objects.property(String::class.java)
 
   @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
@@ -76,17 +76,17 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
   fun run() {
     val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
     val entries =
-        inputFile
-            .get()
-            .asFile
-            .readLines()
-            .mapNotNull { line ->
-              val trimmed = line.trim()
-              if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
-              val parts = trimmed.split("|", limit = 2)
-              if (parts.size != 2) return@mapNotNull null
-              parts[0].uppercase(Locale.ROOT) to parts[1]
-            }
+      inputFile
+        .get()
+        .asFile
+        .readLines()
+        .mapNotNull { line ->
+          val trimmed = line.trim()
+          if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+          val parts = trimmed.split("|", limit = 2)
+          if (parts.size != 2) return@mapNotNull null
+          parts[0].uppercase(Locale.ROOT) to parts[1]
+        }
 
     val builder = StringBuilder()
     builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
@@ -107,8 +107,7 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
     builder.appendLine("    return entries.filter { it.type == type }.map { entry ->")
     builder.appendLine("      val decoded = ByteArray(entry.payload.size)")
     builder.appendLine("      entry.payload.forEachIndexed { index, value ->")
-    builder.appendLine(
-        "        val xorByte = keyBytes[index % keyBytes.size].toInt() and 0xFF")
+    builder.appendLine("        val xorByte = keyBytes[index % keyBytes.size].toInt() and 0xFF")
     builder.appendLine("        decoded[index] = (value xor xorByte).toByte()")
     builder.appendLine("      }")
     builder.appendLine("      decoded.toString(Charsets.UTF_8)")
@@ -124,10 +123,10 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
   private fun encode(value: String, key: ByteArray): String {
     val source = value.toByteArray(Charsets.UTF_8)
     return source
-        .mapIndexed { index, byte ->
-          (byte.toInt() xor (key[index % key.size].toInt())) and 0xFF
-        }
-        .joinToString(", ")
+      .mapIndexed { index, byte ->
+        (byte.toInt() xor (key[index % key.size].toInt())) and 0xFF
+      }
+      .joinToString(", ")
   }
 }
 
@@ -205,52 +204,52 @@ tasks.withType<KotlinCompile>().configureEach {
 androidComponents {
   onVariants { variant ->
     val variantName =
-        variant.name.replaceFirstChar { ch ->
-          if (ch.isLowerCase()) ch.titlecase(Locale.ROOT) else ch.toString()
-        }
+      variant.name.replaceFirstChar { ch ->
+        if (ch.isLowerCase()) ch.titlecase(Locale.ROOT) else ch.toString()
+      }
     val xorKeyValue =
-        UUID.nameUUIDFromBytes("${project.path}:${variant.name}".toByteArray())
-            .toString()
-            .replace("-", "")
-            .take(16)
+      UUID.nameUUIDFromBytes("${project.path}:${variant.name}".toByteArray())
+        .toString()
+        .replace("-", "")
+        .take(16)
 
     tasks.register<ComputeDexHashTask>("compute${variantName}DexHash") {
       description = "Computes DEX integrity hash for ${variant.name}"
       group = "verification"
       sourceFiles.from(
-          project.fileTree("src/main/java") { include("**/*.kt", "**/*.java") },
-          project.fileTree("src/main/kotlin") { include("**/*.kt", "**/*.java") },
-          project.fileTree("src/main/cpp") { include("**/*.cpp", "**/*.hpp", "**/*.h") },
+        project.fileTree("src/main/java") { include("**/*.kt", "**/*.java") },
+        project.fileTree("src/main/kotlin") { include("**/*.kt", "**/*.java") },
+        project.fileTree("src/main/cpp") { include("**/*.cpp", "**/*.hpp", "**/*.h") },
       )
       outputFile.set(layout.buildDirectory.file("intermediates/dexHash/${variant.name}/hash.txt"))
     }
 
     val stringsTask =
-        tasks.register<GenerateObfuscatedStringsTask>("generate${variantName}RootStrings") {
-          description = "Generates obfuscated root strings for ${variant.name}"
-          group = "build"
-          inputFile.set(layout.projectDirectory.file("root_strings.txt"))
-          xorKey.set(xorKeyValue)
-          outputDir.set(layout.buildDirectory.dir("generated/rootStrings/${variant.name}"))
-        }
+      tasks.register<GenerateObfuscatedStringsTask>("generate${variantName}RootStrings") {
+        description = "Generates obfuscated root strings for ${variant.name}"
+        group = "build"
+        inputFile.set(layout.projectDirectory.file("root_strings.txt"))
+        xorKey.set(xorKeyValue)
+        outputDir.set(layout.buildDirectory.dir("generated/rootStrings/${variant.name}"))
+      }
 
     variant.sources.kotlin?.addGeneratedSourceDirectory(
-        stringsTask,
-        GenerateObfuscatedStringsTask::outputDir,
+      stringsTask,
+      GenerateObfuscatedStringsTask::outputDir,
     )
     variant.sources.java?.addGeneratedSourceDirectory(
-        stringsTask,
-        GenerateObfuscatedStringsTask::outputDir,
+      stringsTask,
+      GenerateObfuscatedStringsTask::outputDir,
     )
 
     val dexHashValue = project.calculateSourceHash()
     variant.buildConfigFields?.put(
-        "ROOT_STRING_KEY",
-        BuildConfigField("String", "\"$xorKeyValue\"", "Variant-specific XOR key"),
+      "ROOT_STRING_KEY",
+      BuildConfigField("String", "\"$xorKeyValue\"", "Variant-specific XOR key"),
     )
     variant.buildConfigFields?.put(
-        "DEX_INTEGRITY_HASH",
-        BuildConfigField("String", "\"$dexHashValue\"", "Runtime DEX integrity hash"),
+      "DEX_INTEGRITY_HASH",
+      BuildConfigField("String", "\"$dexHashValue\"", "Runtime DEX integrity hash"),
     )
   }
 }
@@ -258,13 +257,13 @@ androidComponents {
 fun Project.calculateSourceHash(): String {
   val digest = MessageDigest.getInstance("SHA-256")
   val roots =
-      listOf("src/main/java", "src/main/kotlin", "src/main/cpp")
-          .map { projectDir.resolve(it) }
-          .filter { it.exists() }
+    listOf("src/main/java", "src/main/kotlin", "src/main/cpp")
+      .map { projectDir.resolve(it) }
+      .filter { it.exists() }
   val files =
-      roots
-          .flatMap { root -> root.walkTopDown().filter { it.isFile }.toList() }
-          .sortedBy { it.relativeTo(projectDir).path }
+    roots
+      .flatMap { root -> root.walkTopDown().filter { it.isFile }.toList() }
+      .sortedBy { it.relativeTo(projectDir).path }
   files.forEach { file ->
     file.inputStream().use { input ->
       val buffer = ByteArray(DEFAULT_BUFFER_SIZE)

@@ -68,15 +68,15 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine("=== Device Information ===")
                   appendLine(result.data.deviceInfo.toString(2))
                   appendLine()
-                                            appendLine("=== Display Information ===")
-                                            appendLine(result.data.displayInfo.toString(2))
-                                            appendLine()
-                                            appendLine("=== Debug Information ===")
-                                            appendLine(result.data.debugInfo.toString(2))
-                                            appendLine()
-                                            appendLine("=== Root Detection ===")
-                                            appendLine(result.data.rootInfo.toString(2))
-                                        }
+                  appendLine("=== Display Information ===")
+                  appendLine(result.data.displayInfo.toString(2))
+                  appendLine()
+                  appendLine("=== Debug Information ===")
+                  appendLine(result.data.debugInfo.toString(2))
+                  appendLine()
+                  appendLine("=== Root Detection ===")
+                  appendLine(result.data.rootInfo.toString(2))
+                }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"
               }

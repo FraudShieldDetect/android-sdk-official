@@ -3,28 +3,28 @@ package com.protosdk.sdk.fingerprint.collectors
 import android.content.Context
 import android.os.Debug
 import com.protosdk.sdk.fingerprint.integrity.DexIntegrityVerifier
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.internal.RootStringDecoder
 import com.protosdk.sdk.fingerprint.nativebridge.RootDetectionBridge
-import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.utils.SecurityCollectorUtils
-import java.security.SecureRandom
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
 
 class RootDetectionCollector(
-    private val bridge: RootDetectionBridge = RootDetectionBridge,
-    private val random: SecureRandom = SecureRandom(),
+  private val bridge: RootDetectionBridge = RootDetectionBridge,
+  private val random: SecureRandom = SecureRandom(),
 ) : BaseCollector() {
 
   override suspend fun collect(context: Context): JSONObject = withContext(Dispatchers.IO) {
     try {
       withTimeout(200L) {
         val integrityVerified =
-            runCatching { DexIntegrityVerifier.verify(context) }.getOrDefault(false)
+          runCatching { DexIntegrityVerifier.verify(context) }.getOrDefault(false)
         safeCollect { performDetection(context, integrityVerified) }
       }
     } catch (timeout: TimeoutCancellationException) {
@@ -40,8 +40,8 @@ class RootDetectionCollector(
   }
 
   private fun performDetection(
-      context: Context,
-      integrityVerified: Boolean,
+    context: Context,
+    integrityVerified: Boolean,
   ): JSONObject {
     val indicators = linkedSetOf<String>()
     var nativeChecks = 0
@@ -68,49 +68,49 @@ class RootDetectionCollector(
 
     operations += {
       RootStringDecoder.paths()
-          .shuffled(random)
-          .forEach { path ->
-            if (stat(path)) {
-              val highConfidence = highConfidencePathKeywords.any { path.contains(it, ignoreCase = true) }
-              recordIndicator("path:$path", highConfidence)
-            }
+        .shuffled(random)
+        .forEach { path ->
+          if (stat(path)) {
+            val highConfidence = highConfidencePathKeywords.any { path.contains(it, ignoreCase = true) }
+            recordIndicator("path:$path", highConfidence)
           }
+        }
     }
 
     operations += {
       RootStringDecoder.properties()
-          .shuffled(random)
-          .forEach { key ->
-            val rule = propertyAlerts[key] ?: return@forEach
-            val value = property(key)
-            if (rule.matcher.invoke(value)) {
-              recordIndicator("property:$key=$value", rule.highConfidence)
-            }
+        .shuffled(random)
+        .forEach { key ->
+          val rule = propertyAlerts[key] ?: return@forEach
+          val value = property(key)
+          if (rule.matcher.invoke(value)) {
+            recordIndicator("property:$key=$value", rule.highConfidence)
           }
+        }
     }
 
     operations += {
       RootStringDecoder.packages()
-          .shuffled(random)
-          .forEach { packageName ->
-            if (SecurityCollectorUtils.isAppInstalled(context, packageName)) {
-              val highConfidence = highConfidencePackageNames.contains(packageName)
-              recordIndicator("package:$packageName", highConfidence)
-            }
+        .shuffled(random)
+        .forEach { packageName ->
+          if (SecurityCollectorUtils.isAppInstalled(context, packageName)) {
+            val highConfidence = highConfidencePackageNames.contains(packageName)
+            recordIndicator("package:$packageName", highConfidence)
           }
+        }
     }
 
     operations += {
       RootStringDecoder.env()
-          .shuffled(random)
-          .forEach { envVar ->
-            val value = System.getenv(envVar) ?: return@forEach
-            if (value.isEmpty()) return@forEach
-            val lower = value.lowercase()
-            if (envSignals.any { lower.contains(it) }) {
-              recordIndicator("env:$envVar", false)
-            }
+        .shuffled(random)
+        .forEach { envVar ->
+          val value = System.getenv(envVar) ?: return@forEach
+          if (value.isEmpty()) return@forEach
+          val lower = value.lowercase()
+          if (envSignals.any { lower.contains(it) }) {
+            recordIndicator("env:$envVar", false)
           }
+        }
     }
 
     operations.shuffle(random)
@@ -135,42 +135,42 @@ class RootDetectionCollector(
   override fun getRequiredPermissions(): List<String> = emptyList()
 
   private val envSignals =
-      listOf("su", "busybox", "magisk", "/data/local", "/system/xbin", "kernelsu")
+    listOf("su", "busybox", "magisk", "/data/local", "/system/xbin", "kernelsu")
 
   private data class PropertyAlert(
-      val matcher: (String) -> Boolean,
-      val highConfidence: Boolean,
+    val matcher: (String) -> Boolean,
+    val highConfidence: Boolean,
   )
 
   private val propertyAlerts =
-      mapOf(
-          "ro.debuggable" to PropertyAlert(matcher = { it == "1" }, highConfidence = false),
-          "ro.secure" to PropertyAlert(matcher = { it == "0" }, highConfidence = false),
-          "ro.boot.vbmeta.device_state" to
-              PropertyAlert(
-                  matcher = { it.equals("unlocked", ignoreCase = true) },
-                  highConfidence = true,
-              ),
-          "ro.boot.verifiedbootstate" to
-              PropertyAlert(
-                  matcher = { it.equals("orange", ignoreCase = true) },
-                  highConfidence = true,
-              ),
-          "ro.boot.flash.locked" to PropertyAlert(matcher = { it == "0" }, highConfidence = true),
-          "ro.boot.veritymode" to
-              PropertyAlert(matcher = { it.equals("logging", ignoreCase = true) }, highConfidence = false),
-          "ro.boot.warranty_bit" to PropertyAlert(matcher = { it == "0" }, highConfidence = true),
-      )
+    mapOf(
+      "ro.debuggable" to PropertyAlert(matcher = { it == "1" }, highConfidence = false),
+      "ro.secure" to PropertyAlert(matcher = { it == "0" }, highConfidence = false),
+      "ro.boot.vbmeta.device_state" to
+        PropertyAlert(
+          matcher = { it.equals("unlocked", ignoreCase = true) },
+          highConfidence = true,
+        ),
+      "ro.boot.verifiedbootstate" to
+        PropertyAlert(
+          matcher = { it.equals("orange", ignoreCase = true) },
+          highConfidence = true,
+        ),
+      "ro.boot.flash.locked" to PropertyAlert(matcher = { it == "0" }, highConfidence = true),
+      "ro.boot.veritymode" to
+        PropertyAlert(matcher = { it.equals("logging", ignoreCase = true) }, highConfidence = false),
+      "ro.boot.warranty_bit" to PropertyAlert(matcher = { it == "0" }, highConfidence = true),
+    )
 
   private val highConfidencePathKeywords = listOf("magisk", "kernelsu", "zygisk", "ksu")
 
   private val highConfidencePackageNames =
-      setOf(
-          "com.topjohnwu.magisk",
-          "eu.chainfire.supersu",
-          "com.kingroot.kinguser",
-          "com.topjohnwu.magisk.beta",
-      )
+    setOf(
+      "com.topjohnwu.magisk",
+      "eu.chainfire.supersu",
+      "com.kingroot.kinguser",
+      "com.topjohnwu.magisk.beta",
+    )
 
   private companion object {
     const val MIN_INDICATORS_FOR_ROOT = 3
