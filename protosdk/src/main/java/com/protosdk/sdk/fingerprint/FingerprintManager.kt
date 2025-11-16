@@ -5,6 +5,7 @@ import com.protosdk.sdk.fingerprint.collectors.BuildInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DebugInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DeviceInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DisplayInfoCollector
+import com.protosdk.sdk.fingerprint.collectors.RootDetectionCollector
 import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
 import kotlinx.coroutines.*
 import org.json.JSONArray
@@ -41,10 +42,11 @@ private constructor(
     if (isInitialized) return
 
     // Initialize collectors
-    collectors["buildInfo"] = BuildInfoCollector()
-    collectors["deviceInfo"] = DeviceInfoCollector()
-    collectors["displayInfo"] = DisplayInfoCollector()
-    collectors["debugInfo"] = DebugInfoCollector()
+        collectors["buildInfo"] = BuildInfoCollector()
+        collectors["deviceInfo"] = DeviceInfoCollector()
+        collectors["displayInfo"] = DisplayInfoCollector()
+        collectors["debugInfo"] = DebugInfoCollector()
+        collectors["rootInfo"] = RootDetectionCollector()
 
     isInitialized = true
   }
@@ -158,6 +160,7 @@ private constructor(
           "deviceInfo" -> deviceInfo = data
           "displayInfo" -> displayInfo = data
           "debugInfo" -> debugInfo = data
+          "rootInfo" -> rootInfo = data
         }
       }
     }
