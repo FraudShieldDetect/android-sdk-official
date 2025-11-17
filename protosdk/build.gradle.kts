@@ -130,6 +130,59 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
   }
 }
 
+abstract class GenerateEmulatorStringsTask : DefaultTask() {
+  @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
+
+  @get:Input val xorKey: org.gradle.api.provider.Property<String> =
+    project.objects.property(String::class.java)
+
+  @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
+
+  @TaskAction
+  fun run() {
+    val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
+    val entries =
+      inputFile
+        .get()
+        .asFile
+        .readLines()
+        .mapNotNull { line ->
+          val trimmed = line.trim()
+          if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+          val parts = trimmed.split("|", limit = 2)
+          if (parts.size != 2) return@mapNotNull null
+          parts[0].uppercase(Locale.ROOT) to parts[1]
+        }
+
+    val builder = StringBuilder()
+    builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
+    builder.appendLine()
+    builder.appendLine("internal object EmulatorStringTable {")
+    builder.appendLine("  internal data class Entry(val type: String, val payload: IntArray)")
+    builder.appendLine("  internal fun entries(): List<Entry> = listOf(")
+    entries.forEachIndexed { index, (type, value) ->
+      val encoded = encode(value, keyBytes)
+      builder.append("    Entry(\"$type\", intArrayOf($encoded))")
+      if (index < entries.lastIndex) builder.appendLine(",") else builder.appendLine()
+    }
+    builder.appendLine("  )")
+    builder.appendLine("}")
+
+    val outputFile = outputDir.get().file("EmulatorStringTable.kt").asFile
+    outputFile.parentFile.mkdirs()
+    outputFile.writeText(builder.toString())
+  }
+
+  private fun encode(value: String, key: ByteArray): String {
+    val source = value.toByteArray(Charsets.UTF_8)
+    return source
+      .mapIndexed { index, byte ->
+        (byte.toInt() xor (key[index % key.size].toInt())) and 0xFF
+      }
+      .joinToString(", ")
+  }
+}
+
 android {
   namespace = "com.protosdk.sdk"
   compileSdk = 35
@@ -212,6 +265,11 @@ androidComponents {
         .toString()
         .replace("-", "")
         .take(16)
+    val emulatorKeyValue =
+      UUID.nameUUIDFromBytes("${project.path}:${variant.name}:emulator".toByteArray())
+        .toString()
+        .replace("-", "")
+        .take(16)
 
     tasks.register<ComputeDexHashTask>("compute${variantName}DexHash") {
       description = "Computes DEX integrity hash for ${variant.name}"
@@ -242,10 +300,32 @@ androidComponents {
       GenerateObfuscatedStringsTask::outputDir,
     )
 
+    val emulatorStringsTask =
+      tasks.register<GenerateEmulatorStringsTask>("generate${variantName}EmulatorStrings") {
+        description = "Generates obfuscated emulator strings for ${variant.name}"
+        group = "build"
+        inputFile.set(layout.projectDirectory.file("emulator_strings.txt"))
+        xorKey.set(emulatorKeyValue)
+        outputDir.set(layout.buildDirectory.dir("generated/emulatorStrings/${variant.name}"))
+      }
+
+    variant.sources.kotlin?.addGeneratedSourceDirectory(
+      emulatorStringsTask,
+      GenerateEmulatorStringsTask::outputDir,
+    )
+    variant.sources.java?.addGeneratedSourceDirectory(
+      emulatorStringsTask,
+      GenerateEmulatorStringsTask::outputDir,
+    )
+
     val dexHashValue = project.calculateSourceHash()
     variant.buildConfigFields?.put(
       "ROOT_STRING_KEY",
       BuildConfigField("String", "\"$xorKeyValue\"", "Variant-specific XOR key"),
+    )
+    variant.buildConfigFields?.put(
+      "EMULATOR_STRING_KEY",
+      BuildConfigField("String", "\"$emulatorKeyValue\"", "Variant-specific emulator XOR key"),
     )
     variant.buildConfigFields?.put(
       "DEX_INTEGRITY_HASH",

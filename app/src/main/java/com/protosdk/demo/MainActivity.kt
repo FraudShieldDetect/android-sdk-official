@@ -76,6 +76,9 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine()
                   appendLine("=== Root Detection ===")
                   appendLine(result.data.rootInfo.toString(2))
+                  appendLine()
+                  appendLine("=== Emulator Detection ===")
+                  appendLine(result.data.emulatorInfo.toString(2))
                 }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"

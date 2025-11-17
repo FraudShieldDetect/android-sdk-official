@@ -50,9 +50,6 @@ render.experimental.xml
 .externalNativeBuild
 .cxx/
 
-# C++ source files
-protosdk/src/main/cpp/
-
 # Google Services (e.g. APIs or Firebase)
 google-services.json
 

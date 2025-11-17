@@ -1,0 +1,68 @@
+# Critical emulator file paths
+PATH|/dev/qemu_pipe
+PATH|/dev/socket/qemud
+PATH|/dev/socket/genyd
+PATH|/dev/socket/baseband_genyd
+PATH|/sys/qemu_trace
+PATH|/system/lib/libc_malloc_debug_qemu.so
+PATH|/system/etc/init.goldfish.rc
+PATH|/system/bin/qemu-props
+PATH|/system/bin/androVM-prop
+PATH|/system/bin/nox-prop
+PATH|/system/bin/microvirt-prop
+PATH|/vendor/lib/libc_malloc_debug_qemu.so
+PATH|/system/lib64/libqemu_common.so
+
+# Build properties that often leak emulators
+PROPERTY|ro.kernel.qemu
+PROPERTY|ro.hardware
+PROPERTY|ro.product.device
+PROPERTY|ro.product.model
+PROPERTY|ro.product.manufacturer
+PROPERTY|ro.bootloader
+PROPERTY|ro.board.platform
+PROPERTY|ro.product.board
+PROPERTY|ro.hardware.chipname
+PROPERTY|ro.product.cpu.abi
+
+# Device identifiers and hypervisor markers
+DEVICE|goldfish
+DEVICE|ranchu
+DEVICE|emulator
+DEVICE|generic
+DEVICE|sdk_phone
+DEVICE|sdk_gphone
+DEVICE|google_sdk
+DEVICE|sdk_x86
+DEVICE|vbox86p
+DEVICE|android_x86
+DEVICE|bluestacks
+DEVICE|ldplayer
+DEVICE|nox
+DEVICE|genymotion
+DEVICE|google_play_games
+
+# MAC prefixes for virtual NICs
+MAC_PREFIX|52:54:00
+MAC_PREFIX|52:55:0A
+MAC_PREFIX|08:00:27
+MAC_PREFIX|0A:00:27
+MAC_PREFIX|00:16:3E
+MAC_PREFIX|00:19:0F
+
+# IP ranges that frequently show up in emulator L2 networks
+IP_RANGE|10.0.2.
+IP_RANGE|192.168.56.
+IP_RANGE|192.168.231.
+IP_RANGE|172.17.
+
+# Tokens to scan inside /proc/cpuinfo or other proc files
+PROC_TOKEN|goldfish
+PROC_TOKEN|ranchu
+PROC_TOKEN|qemu
+PROC_TOKEN|virtualbox
+PROC_TOKEN|genymotion
+PROC_TOKEN|vbox
+PROC_TOKEN|bluestacks
+PROC_TOKEN|sdk_gphone_x86
+PROC_TOKEN|hypervisor

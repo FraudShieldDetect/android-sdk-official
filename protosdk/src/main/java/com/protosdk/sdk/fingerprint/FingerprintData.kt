@@ -8,6 +8,7 @@ data class FingerprintData(
   var displayInfo: JSONObject = JSONObject(),
   var debugInfo: JSONObject = JSONObject(),
   var rootInfo: JSONObject = JSONObject(),
+  var emulatorInfo: JSONObject = JSONObject(),
   var timestamp: Long = System.currentTimeMillis(),
 ) {
   fun toJson(): JSONObject {
@@ -17,6 +18,7 @@ data class FingerprintData(
       put("display", displayInfo)
       put("debug", debugInfo)
       put("root", rootInfo)
+      put("emulator", emulatorInfo)
     }
 
     // Check JSON size (in bytes)
@@ -38,6 +40,7 @@ data class FingerprintData(
       put("display", displayInfo)
       put("debug", debugInfo)
       put("root", rootInfo)
+      put("emulator", emulatorInfo)
       put("timestamp", timestamp)
     }
 
