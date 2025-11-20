@@ -183,6 +183,67 @@ abstract class GenerateEmulatorStringsTask : DefaultTask() {
   }
 }
 
+abstract class GenerateGpuStringsTask : DefaultTask() {
+  @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
+
+  @get:Input val xorKey: org.gradle.api.provider.Property<String> =
+    project.objects.property(String::class.java)
+
+  @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
+
+  @TaskAction
+  fun run() {
+    val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
+    val entries =
+      inputFile
+        .get()
+        .asFile
+        .readLines()
+        .mapNotNull { line ->
+          val trimmed = line.trim()
+          if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+          val parts = trimmed.split("|", limit = 2)
+          if (parts.size != 2) return@mapNotNull null
+          parts[0].uppercase(Locale.ROOT) to parts[1]
+        }
+
+    val builder = StringBuilder()
+    builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
+    builder.appendLine()
+    builder.appendLine("internal object GpuStringTable {")
+    builder.appendLine("  internal data class Entry(val type: String, val hash: String, val payload: IntArray)")
+    builder.appendLine("  internal fun entries(): List<Entry> = listOf(")
+    entries.forEachIndexed { index, (type, value) ->
+      val encoded = encode(value, keyBytes)
+      val hashed = hashValue(value)
+      builder.append("    Entry(\"$type\", \"$hashed\", intArrayOf($encoded))")
+      if (index < entries.lastIndex) builder.appendLine(",") else builder.appendLine()
+    }
+    builder.appendLine("  )")
+    builder.appendLine("}")
+
+    val outputFile = outputDir.get().file("GpuStringTable.kt").asFile
+    outputFile.parentFile.mkdirs()
+    outputFile.writeText(builder.toString())
+  }
+
+  private fun encode(value: String, key: ByteArray): String {
+    val source = value.toByteArray(Charsets.UTF_8)
+    return source
+      .mapIndexed { index, byte ->
+        (byte.toInt() xor (key[index % key.size].toInt())) and 0xFF
+      }
+      .joinToString(", ")
+  }
+
+  private fun hashValue(value: String): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    val normalized = value.trim().lowercase(Locale.ROOT).toByteArray(Charsets.UTF_8)
+    digest.update(normalized)
+    return digest.digest().joinToString("") { "%02x".format(it) }
+  }
+}
+
 android {
   namespace = "com.protosdk.sdk"
   compileSdk = 35
@@ -270,6 +331,11 @@ androidComponents {
         .toString()
         .replace("-", "")
         .take(16)
+    val gpuKeyValue =
+      UUID.nameUUIDFromBytes("${project.path}:${variant.name}:gpu".toByteArray())
+        .toString()
+        .replace("-", "")
+        .take(16)
 
     tasks.register<ComputeDexHashTask>("compute${variantName}DexHash") {
       description = "Computes DEX integrity hash for ${variant.name}"
@@ -318,6 +384,24 @@ androidComponents {
       GenerateEmulatorStringsTask::outputDir,
     )
 
+    val gpuStringsTask =
+      tasks.register<GenerateGpuStringsTask>("generate${variantName}GpuStrings") {
+        description = "Generates obfuscated GPU strings for ${variant.name}"
+        group = "build"
+        inputFile.set(layout.projectDirectory.file("gpu_strings.txt"))
+        xorKey.set(gpuKeyValue)
+        outputDir.set(layout.buildDirectory.dir("generated/gpuStrings/${variant.name}"))
+      }
+
+    variant.sources.kotlin?.addGeneratedSourceDirectory(
+      gpuStringsTask,
+      GenerateGpuStringsTask::outputDir,
+    )
+    variant.sources.java?.addGeneratedSourceDirectory(
+      gpuStringsTask,
+      GenerateGpuStringsTask::outputDir,
+    )
+
     val dexHashValue = project.calculateSourceHash()
     variant.buildConfigFields?.put(
       "ROOT_STRING_KEY",
@@ -326,6 +410,10 @@ androidComponents {
     variant.buildConfigFields?.put(
       "EMULATOR_STRING_KEY",
       BuildConfigField("String", "\"$emulatorKeyValue\"", "Variant-specific emulator XOR key"),
+    )
+    variant.buildConfigFields?.put(
+      "GPU_STRING_KEY",
+      BuildConfigField("String", "\"$gpuKeyValue\"", "Variant-specific GPU XOR key"),
     )
     variant.buildConfigFields?.put(
       "DEX_INTEGRITY_HASH",
