@@ -8,8 +8,9 @@ import android.os.Build
 import android.os.Debug
 import android.os.SystemClock
 import android.telephony.TelephonyManager
-import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.internal.EmulatorStringDecoder
+import com.protosdk.sdk.fingerprint.internal.GpuSignalBus
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.nativebridge.EmulatorDetectionBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -64,6 +65,7 @@ class EmulatorDetectionCollector(
       bridge.nativeGetProperty(key)
     }
     val deviceTokens = EmulatorStringDecoder.devices().map { it.lowercase(locale) }
+    val gpuSignals = GpuSignalBus.latest()
 
     val operations = mutableListOf<() -> Unit>()
 
@@ -205,6 +207,21 @@ class EmulatorDetectionCollector(
     operations.shuffle(random)
     operations.forEach { it.invoke() }
 
+    gpuSignals?.let { signals ->
+      if (signals.suspectedVirtualization) {
+        recordIndicator("gpu:suspected_virtualization", WEIGHT_HIGH, highConfidence = true)
+      } else if (signals.confidenceScore >= 0.5) {
+        val formatted = String.format(locale, "%.2f", signals.confidenceScore)
+        recordIndicator("gpu:confidence_$formatted", WEIGHT_MEDIUM)
+      }
+      signals.suspiciousIndicators.take(5).forEach { entry ->
+        recordIndicator("gpu_hint:$entry", WEIGHT_LOW)
+      }
+      if (signals.hardwareChecksPassed <= 3) {
+        recordIndicator("gpu:hardware_underperform", WEIGHT_LOW)
+      }
+    }
+
     val tracerPid = bridge.nativeTracerPid()
     val antiDebugTriggered = Debug.isDebuggerConnected() || tracerPid > 0
     if (antiDebugTriggered) {
@@ -221,6 +238,11 @@ class EmulatorDetectionCollector(
       put("confidenceScore", String.format(locale, "%.2f", confidenceScore).toDouble())
       put("antiDebugTriggered", antiDebugTriggered)
       put("highConfidenceSignals", highConfidenceSignals)
+      put("gpuSignalsApplied", gpuSignals != null)
+      gpuSignals?.let { signals ->
+        put("gpuSignalConfidence", String.format(locale, "%.2f", signals.confidenceScore).toDouble())
+        put("gpuSignalAgeMs", (System.currentTimeMillis() - signals.timestampMs).coerceAtLeast(0))
+      }
     }
   }
 
