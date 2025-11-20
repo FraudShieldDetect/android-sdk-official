@@ -79,6 +79,9 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine()
                   appendLine("=== Emulator Detection ===")
                   appendLine(result.data.emulatorInfo.toString(2))
+                  appendLine()
+                  appendLine("=== GPU Fingerprinting ===")
+                  appendLine(result.data.gpuInfo.toString(2))
                 }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"
@@ -123,11 +126,16 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
     }
 
     Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
-      Text(
-        text = resultText,
-        modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-        style = MaterialTheme.typography.bodyMedium,
-      )
+      Box(modifier = Modifier.fillMaxSize()) {
+        Text(
+          text = resultText,
+          modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+          style = MaterialTheme.typography.bodyMedium,
+        )
+      }
     }
   }
 }
