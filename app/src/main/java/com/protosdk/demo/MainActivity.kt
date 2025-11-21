@@ -85,6 +85,9 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine()
                   appendLine("=== CPU Fingerprinting ===")
                   appendLine(result.data.cpuInfo.toString(2))
+                  appendLine()
+                  appendLine("=== Storage Information ===")
+                  appendLine(result.data.storageInfo.toString(2))
                 }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"
