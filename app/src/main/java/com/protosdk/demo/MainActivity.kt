@@ -82,6 +82,9 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine()
                   appendLine("=== GPU Fingerprinting ===")
                   appendLine(result.data.gpuInfo.toString(2))
+                  appendLine()
+                  appendLine("=== CPU Fingerprinting ===")
+                  appendLine(result.data.cpuInfo.toString(2))
                 }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"
