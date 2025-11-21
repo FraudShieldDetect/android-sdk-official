@@ -7,6 +7,7 @@ import com.protosdk.sdk.fingerprint.collectors.DeviceInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DisplayInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.EmulatorDetectionCollector
 import com.protosdk.sdk.fingerprint.collectors.GpuInfoCollector
+import com.protosdk.sdk.fingerprint.collectors.CpuInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.RootDetectionCollector
 import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
 import kotlinx.coroutines.*
@@ -51,6 +52,8 @@ private constructor(
     collectors["rootInfo"] = RootDetectionCollector()
     collectors["emulatorInfo"] = EmulatorDetectionCollector()
     collectors["gpuInfo"] = GpuInfoCollector()
+    collectors["cpuInfo"] = com.protosdk.sdk.fingerprint.collectors.CpuInfoCollector()
+    collectors["cpuInfo"] = CpuInfoCollector()
 
     isInitialized = true
   }
@@ -167,6 +170,7 @@ private constructor(
           "rootInfo" -> rootInfo = data
           "emulatorInfo" -> emulatorInfo = data
           "gpuInfo" -> gpuInfo = data
+          "cpuInfo" -> cpuInfo = data
         }
       }
     }
