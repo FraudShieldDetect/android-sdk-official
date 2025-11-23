@@ -12,55 +12,70 @@ import org.json.JSONObject
 
 class SensorInfoCollector : BaseCollector() {
   override suspend fun collect(context: Context): JSONObject = safeCollect {
-    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-      ?: return@safeCollect JSONObject().apply { put("error", "sensorManagerUnavailable") }
+    val sensorManager =
+      context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        ?: return@safeCollect JSONObject().apply {
+          put("error", "sensorManagerUnavailable")
+        }
 
     val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
     val dynamicSensors =
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
         sensorManager.getDynamicSensorList(Sensor.TYPE_ALL)
-      } else emptyList()
+      } else {
+        emptyList()
+      }
 
     val sensorArray = JSONArray()
     sensors.forEach { sensor ->
-      val obj = JSONObject().apply {
-        put("name", sensor.name)
-        put("vendor", sensor.vendor)
-        put("type", sensor.type)
-        put("stringType", if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) sensor.stringType else null)
-        put("version", sensor.version)
-        put("powerMa", sensor.power)
-        put("maxRange", sensor.maximumRange)
-        put("resolution", sensor.resolution)
-        put("minDelayMicros", sensor.minDelay)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-          put("maxDelayMicros", sensor.maxDelay)
-          put("fifoMaxEventCount", sensor.fifoMaxEventCount)
-          put("fifoReservedEventCount", sensor.fifoReservedEventCount)
-          put("isWakeUp", sensor.isWakeUpSensor)
+      val obj =
+        JSONObject().apply {
+          put("name", sensor.name)
+          put("vendor", sensor.vendor)
+          put("type", sensor.type)
+          put(
+            "stringType",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+              sensor.stringType
+            } else {
+              null
+            },
+          )
+          put("version", sensor.version)
+          put("powerMa", sensor.power)
+          put("maxRange", sensor.maximumRange)
+          put("resolution", sensor.resolution)
+          put("minDelayMicros", sensor.minDelay)
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            put("maxDelayMicros", sensor.maxDelay)
+            put("fifoMaxEventCount", sensor.fifoMaxEventCount)
+            put("fifoReservedEventCount", sensor.fifoReservedEventCount)
+            put("isWakeUp", sensor.isWakeUpSensor)
+          }
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            put("isDynamic", sensor.isDynamicSensor)
+          }
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            put("reportingMode", reportingModeToString(sensor.reportingMode))
+          }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-          put("isDynamic", sensor.isDynamicSensor)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-          put("reportingMode", reportingModeToString(sensor.reportingMode))
-        }
-      }
       sensorArray.put(obj)
     }
 
     val vendorCounts = sensors.groupingBy { it.vendor }.eachCount()
-    val aospGoldfishCount = sensors.count {
-      val v = it.vendor.lowercase()
-      v.contains("goldfish") || v.contains("the android open source project") || v == "aosp"
-    }
+    val aospGoldfishCount =
+      sensors.count {
+        val v = it.vendor.lowercase()
+        v.contains("goldfish") || v.contains("the android open source project") || v == "aosp"
+      }
 
     val missingCommon =
       listOf(
         Sensor.TYPE_ACCELEROMETER,
         Sensor.TYPE_GYROSCOPE,
         Sensor.TYPE_MAGNETIC_FIELD,
-      ).filter { sensorManager.getDefaultSensor(it) == null }
+      )
+        .filter { sensorManager.getDefaultSensor(it) == null }
 
     publishEmulatorSignals(sensors, missingCommon, vendorCounts)
 
@@ -108,17 +123,25 @@ class SensorInfoCollector : BaseCollector() {
     val uniqueTypes = sensors.map { it.type }.distinct().size
     val missingCore = missingCommon.size
 
-    val goldfishVendorHit = vendorCounts.keys.any {
-      it.contains("goldfish") || it.contains("aosp") || it.contains("android open source project")
-    }
-    val emulatorNameHit = sensors.any {
-      val n = it.name.lowercase(locale)
-      n.contains("goldfish") || n.contains("emulator") || n.contains("android sdk")
-    }
+    val goldfishVendorHit =
+      vendorCounts.keys.any {
+        it.contains("goldfish") ||
+          it.contains("aosp") ||
+          it.contains("android open source project")
+      }
+    val emulatorNameHit =
+      sensors.any {
+        val n = it.name.lowercase(locale)
+        n.contains("goldfish") || n.contains("emulator") || n.contains("android sdk")
+      }
     val vendorAllSame = uniqueVendors == 1 && sensors.isNotEmpty()
-    val onlyAospVendors = sensors.isNotEmpty() && vendorCounts.keys.all {
-      it.contains("android open source project") || it.contains("aosp") || it.contains("goldfish")
-    }
+    val onlyAospVendors =
+      sensors.isNotEmpty() &&
+        vendorCounts.keys.all {
+          it.contains("android open source project") ||
+            it.contains("aosp") ||
+            it.contains("goldfish")
+        }
     val veryFewSensors = sensors.size <= 5
     val veryLowUniqueTypes = uniqueTypes <= 4
     val buildFingerprint = Build.FINGERPRINT.lowercase(locale)
