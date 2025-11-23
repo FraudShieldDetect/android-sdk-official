@@ -91,6 +91,9 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine()
                   appendLine("=== Sensor Information ===")
                   appendLine(result.data.sensorInfo.toString(2))
+                  appendLine()
+                  appendLine("=== Network Information ===")
+                  appendLine(result.data.networkInfo.toString(2))
                 }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"
