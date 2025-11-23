@@ -88,6 +88,9 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine()
                   appendLine("=== Storage Information ===")
                   appendLine(result.data.storageInfo.toString(2))
+                  appendLine()
+                  appendLine("=== Sensor Information ===")
+                  appendLine(result.data.sensorInfo.toString(2))
                 }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"

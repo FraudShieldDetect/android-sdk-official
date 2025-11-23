@@ -3,6 +3,8 @@ package com.protosdk.sdk.fingerprint.collectors
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Debug
@@ -10,6 +12,7 @@ import android.os.SystemClock
 import android.telephony.TelephonyManager
 import com.protosdk.sdk.fingerprint.internal.EmulatorStringDecoder
 import com.protosdk.sdk.fingerprint.internal.GpuSignalBus
+import com.protosdk.sdk.fingerprint.internal.SensorSignalBus
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.nativebridge.EmulatorDetectionBridge
 import kotlinx.coroutines.Dispatchers
@@ -179,6 +182,30 @@ class EmulatorDetectionCollector(
     }
 
     operations += {
+      val sensorSignals = SensorSignalBus.latest()
+      if (sensorSignals != null) {
+        sensorSignals.indicators.take(10).forEach { label ->
+          recordIndicator("sensorbus:$label", WEIGHT_LOW)
+        }
+        recordIndicator(
+          "sensorbus:confidence",
+          sensorSignals.confidenceScore.coerceIn(0.0, 1.0),
+          highConfidence = sensorSignals.suspectedEmulation,
+        )
+        if (!sensorSignals.suspectedEmulation && sensorSignals.missingCoreCount == 0 && sensorSignals.totalSensors > 5) {
+          hardwareChecksPassed += 1
+        }
+      } else {
+        val sensorsHealthy = evaluateSensors(context) { label, weight, highConfidence ->
+          recordIndicator(label, weight, highConfidence)
+        }
+        if (sensorsHealthy) {
+          hardwareChecksPassed += 1
+        }
+      }
+    }
+
+    operations += {
       evaluateImei(context)?.let { status ->
         if (!status.isValid) {
           recordIndicator("telephony:${status.reason}", WEIGHT_LOW)
@@ -320,6 +347,61 @@ class EmulatorDetectionCollector(
     val expectsNeon = supportedAbis.any { it.contains("arm") }
     val probeResult = bridge.nativeNeonProbe()
     return !expectsNeon || probeResult
+  }
+
+  private fun evaluateSensors(
+    context: Context,
+    record: (String, Double, Boolean) -> Unit,
+  ): Boolean {
+    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+      ?: return false
+
+    val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
+    val missingCore = listOf(
+      Sensor.TYPE_ACCELEROMETER,
+      Sensor.TYPE_GYROSCOPE,
+      Sensor.TYPE_MAGNETIC_FIELD,
+    ).count { sensorManager.getDefaultSensor(it) == null }
+
+    val vendorCounts = sensors.groupingBy { it.vendor.lowercase(Locale.ROOT) }.eachCount()
+    val uniqueVendors = vendorCounts.size
+    val uniqueTypes = sensors.map { it.type }.distinct().size
+
+    val goldfishVendorHit = vendorCounts.keys.any { it.contains("goldfish") || it.contains("aosp") || it.contains("android open source project") }
+    val emulatorNameHit = sensors.any {
+      val n = it.name.lowercase(Locale.ROOT)
+      n.contains("goldfish") || n.contains("emulator") || n.contains("android sdk")
+    }
+    val vendorAllSame = uniqueVendors == 1 && sensors.isNotEmpty()
+    val onlyAospVendors = sensors.isNotEmpty() && vendorCounts.keys.all {
+      it.contains("android open source project") || it.contains("aosp") || it.contains("goldfish")
+    }
+    val veryFewSensors = sensors.size <= 5
+    val veryLowUniqueTypes = uniqueTypes <= 4
+
+    if (sensors.isEmpty()) record("sensors:none", WEIGHT_HIGH, true)
+    if (veryFewSensors) record("sensors:very_few", WEIGHT_MEDIUM, false)
+    if (missingCore >= 2) record("sensors:missing_core", WEIGHT_MEDIUM, false)
+    if (goldfishVendorHit) record("sensors:goldfish_vendor", WEIGHT_HIGH, true)
+    if (emulatorNameHit) record("sensors:emulator_named", WEIGHT_HIGH, true)
+    if (vendorAllSame) record("sensors:single_vendor", WEIGHT_LOW, false)
+    if (onlyAospVendors) record("sensors:aosp_only_vendors", WEIGHT_HIGH, true)
+    if (veryLowUniqueTypes) record("sensors:few_unique_types", WEIGHT_LOW, false)
+    if (Build.FINGERPRINT.contains("generic", ignoreCase = true) || Build.FINGERPRINT.contains("sdk_gphone", ignoreCase = true)) {
+      record("sensors:fingerprint_generic", WEIGHT_MEDIUM, false)
+    }
+    val hardware = Build.HARDWARE.lowercase(Locale.ROOT)
+    val model = Build.MODEL.lowercase(Locale.ROOT)
+    if (hardware.contains("goldfish") || hardware.contains("ranchu")) {
+      record("sensors:hardware_goldfish", WEIGHT_HIGH, true)
+    }
+    if (model.contains("sdk") || model.contains("emulator")) {
+      record("sensors:model_emulator", WEIGHT_MEDIUM, false)
+    }
+
+    // Consider sensors healthy if there is a reasonable set and no core misses
+    val sensorsHealthy = sensors.size > 5 && missingCore == 0 && !goldfishVendorHit && !emulatorNameHit
+    return sensorsHealthy
   }
 
   private fun isAbiSuspicious(propertyMap: Map<String, String>): Boolean {
