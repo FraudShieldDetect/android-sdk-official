@@ -12,6 +12,7 @@ data class FingerprintData(
   var gpuInfo: JSONObject = JSONObject(),
   var cpuInfo: JSONObject = JSONObject(),
   var storageInfo: JSONObject = JSONObject(),
+  var networkInfo: JSONObject = JSONObject(),
   var sensorInfo: JSONObject = JSONObject(),
   var timestamp: Long = System.currentTimeMillis(),
 ) {
@@ -26,6 +27,7 @@ data class FingerprintData(
       put("gpu", gpuInfo)
       put("cpu", cpuInfo)
       put("storage", storageInfo)
+      put("network", networkInfo)
       put("sensors", sensorInfo)
     }
 
@@ -52,6 +54,7 @@ data class FingerprintData(
       put("gpu", gpuInfo)
       put("cpu", cpuInfo)
       put("storage", storageInfo)
+      put("network", networkInfo)
       put("sensors", sensorInfo)
       put("timestamp", timestamp)
     }
