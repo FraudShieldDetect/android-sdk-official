@@ -94,6 +94,12 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
                   appendLine()
                   appendLine("=== Network Information ===")
                   appendLine(result.data.networkInfo.toString(2))
+                  appendLine()
+                  appendLine("=== Google Services Framework ID ===")
+                  appendLine(result.data.gsfInfo.toString(2))
+                  appendLine()
+                  appendLine("=== MediaDrm ID (hashed) ===")
+                  appendLine(result.data.mediaDrmInfo.toString(2))
                 }
               } else {
                 "Collection Failed\nError: ${result.error}\nTime: ${result.collectionTimeMs}ms"

@@ -12,6 +12,8 @@ import com.protosdk.sdk.fingerprint.collectors.StorageInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.SensorInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.NetworkInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.RootDetectionCollector
+import com.protosdk.sdk.fingerprint.collectors.GsfIdCollector
+import com.protosdk.sdk.fingerprint.collectors.MediaDrmCollector
 import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
 import kotlinx.coroutines.*
 import org.json.JSONArray
@@ -59,6 +61,8 @@ private constructor(
     collectors["storageInfo"] = StorageInfoCollector()
     collectors["sensorInfo"] = SensorInfoCollector()
     collectors["networkInfo"] = NetworkInfoCollector()
+    collectors["gsfInfo"] = GsfIdCollector()
+    collectors["mediaDrmInfo"] = MediaDrmCollector()
 
     isInitialized = true
   }
@@ -179,6 +183,8 @@ private constructor(
           "storageInfo" -> storageInfo = data
           "sensorInfo" -> sensorInfo = data
           "networkInfo" -> networkInfo = data
+          "gsfInfo" -> gsfInfo = data
+          "mediaDrmInfo" -> mediaDrmInfo = data
         }
       }
     }
