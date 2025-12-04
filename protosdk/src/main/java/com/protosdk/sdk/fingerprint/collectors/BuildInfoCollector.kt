@@ -13,14 +13,12 @@ class BuildInfoCollector : BaseCollector() {
     JSONObject().apply {
       // Basic build information
       put("board", Build.BOARD)
-      put("bootloader", Build.BOOTLOADER)
       put("brand", Build.BRAND)
       put("device", Build.DEVICE)
       put("display", Build.DISPLAY)
       put("fingerprint", Build.FINGERPRINT)
       put("hardware", Build.HARDWARE)
       put("host", Build.HOST)
-      put("id", Build.ID)
       put("manufacturer", Build.MANUFACTURER)
       put("model", Build.MODEL)
       put("product", Build.PRODUCT)
@@ -37,10 +35,9 @@ class BuildInfoCollector : BaseCollector() {
       put("tags", Build.TAGS)
       put("time", Build.TIME)
       put("type", Build.TYPE)
-      put("user", Build.USER)
+      // put("user", Build.USER)
 
       // Radio information
-      put("radio", Build.RADIO)
       put(
         "radioVersion",
         try {
@@ -49,8 +46,6 @@ class BuildInfoCollector : BaseCollector() {
       )
 
       // CPU ABI information
-      put("cpuAbi", Build.CPU_ABI)
-      put("cpuAbi2", Build.CPU_ABI2)
       put("supportedAbis", JSONArray(Build.SUPPORTED_ABIS.toList()))
       put("supported32BitAbis", JSONArray(Build.SUPPORTED_32_BIT_ABIS.toList()))
       put("supported64BitAbis", JSONArray(Build.SUPPORTED_64_BIT_ABIS.toList()))

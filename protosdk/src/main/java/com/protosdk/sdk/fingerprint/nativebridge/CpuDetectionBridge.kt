@@ -8,6 +8,7 @@ object CpuDetectionBridge {
 
   external fun nativeGetCpuTopology(): String
   external fun nativeGetCpuFreqInfo(): String
+
   // external fun nativeGetCpuIdleStates(): String
   // external fun nativeGetPlatformId(): String
   external fun nativeGetProcInfo(): String

@@ -4,8 +4,8 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.StatFs
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
-import java.io.File
 import org.json.JSONObject
+import java.io.File
 
 class StorageInfoCollector : BaseCollector() {
   override suspend fun collect(context: Context): JSONObject = safeCollect {

@@ -19,12 +19,6 @@ class SensorInfoCollector : BaseCollector() {
         }
 
     val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
-    val dynamicSensors =
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        sensorManager.getDynamicSensorList(Sensor.TYPE_ALL)
-      } else {
-        emptyList()
-      }
 
     val sensorArray = JSONArray()
     sensors.forEach { sensor ->
@@ -33,31 +27,6 @@ class SensorInfoCollector : BaseCollector() {
           put("name", sensor.name)
           put("vendor", sensor.vendor)
           put("type", sensor.type)
-          put(
-            "stringType",
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-              sensor.stringType
-            } else {
-              null
-            },
-          )
-          put("version", sensor.version)
-          put("powerMa", sensor.power)
-          put("maxRange", sensor.maximumRange)
-          put("resolution", sensor.resolution)
-          put("minDelayMicros", sensor.minDelay)
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            put("maxDelayMicros", sensor.maxDelay)
-            put("fifoMaxEventCount", sensor.fifoMaxEventCount)
-            put("fifoReservedEventCount", sensor.fifoReservedEventCount)
-            put("isWakeUp", sensor.isWakeUpSensor)
-          }
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            put("isDynamic", sensor.isDynamicSensor)
-          }
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            put("reportingMode", reportingModeToString(sensor.reportingMode))
-          }
         }
       sensorArray.put(obj)
     }
@@ -81,7 +50,6 @@ class SensorInfoCollector : BaseCollector() {
 
     JSONObject().apply {
       put("totalSensors", sensors.size)
-      put("dynamicSensorCount", dynamicSensors.size)
       put("aospGoldfishSensorCount", aospGoldfishCount)
       put("vendorCounts", JSONObject(vendorCounts))
       put("missingCommonSensors", JSONArray(missingCommon))

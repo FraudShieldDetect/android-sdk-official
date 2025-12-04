@@ -183,28 +183,16 @@ std::string BuildCpuTopologyJson() {
   if (levelToSize.count(2)) json += ",\"l2Cache\":" + JsonQuote(levelToSize[2]);
   if (levelToSize.count(3)) json += ",\"l3Cache\":" + JsonQuote(levelToSize[3]);
 
-  // Emit sample of shared maps for anomaly detection.
-  json += ",\"sharedCpuMaps\":[";
-  bool first = true;
-  for (const auto& entry : l2Maps) {
-    if (!first) json += ",";
-    json += JsonQuote(entry);
-    first = false;
-  }
-  json += "]";
-
   json += "}";
   return json;
 }
 
 std::string BuildCpuFreqJson() {
   const std::string base = "/sys/devices/system/cpu/cpu0/cpufreq";
-  std::string minFreq = ReadFile(base + "/cpuinfo_min_freq");
   std::string maxFreq = ReadFile(base + "/cpuinfo_max_freq");
 
   std::string json = "{";
-  json += "\"minFreq\":" + (minFreq.empty() ? "0" : minFreq);
-  json += ",\"maxFreq\":" + (maxFreq.empty() ? "0" : maxFreq);
+  json += "\"maxFreq\":" + (maxFreq.empty() ? "0" : maxFreq);
 
   // Optional available frequencies for richer heuristics.
   std::string availableFreq = ReadFile(base + "/scaling_available_frequencies");
@@ -298,14 +286,12 @@ std::string BuildCpuInfoJson() {
   };
 
   std::string json = "{";
-  json += "\"source\":" + JsonQuote(path);
-  json += ",\"processors\":[";
+  json += "\"processors\":[";
   for (size_t i = 0; i < processors.size(); ++i) {
     if (i > 0) json += ",";
     json += mapToJson(processors[i]);
   }
   json += "]";
-  json += ",\"processorCount\":" + std::to_string(processors.size());
   json += "}";
   return json;
 }

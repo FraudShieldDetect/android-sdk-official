@@ -11,7 +11,6 @@ import android.view.WindowMetrics
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import org.json.JSONArray
 import org.json.JSONObject
-import kotlin.math.roundToInt
 
 class DisplayInfoCollector : BaseCollector() {
 
@@ -24,14 +23,10 @@ class DisplayInfoCollector : BaseCollector() {
 
     val currentWindowMetrics = getCurrentWindowMetrics(windowManager)
     val maximumWindowMetrics = getMaximumWindowMetrics(windowManager)
-    val fallbackDensity = resourceMetrics.density.toDouble()
 
     JSONObject().apply {
       putResourceMetrics(resourceMetrics)
       putRealMetrics(maximumWindowMetrics, resourceMetrics)
-      putWindowBounds("window", currentWindowMetrics, fallbackDensity)
-      putWindowBounds("maximumWindow", maximumWindowMetrics, fallbackDensity)
-      putSizeMetrics(currentWindowMetrics, maximumWindowMetrics, resourceMetrics)
       putDisplayDetails(display)
       putConfiguration(configuration)
     }
@@ -86,69 +81,18 @@ class DisplayInfoCollector : BaseCollector() {
     put("ydpi", metrics.ydpi)
   }
 
-  private fun JSONObject.putRealMetrics(
-    windowMetrics: WindowMetrics?,
-    fallbackMetrics: DisplayMetrics,
-  ) {
-    val bounds = windowMetrics?.bounds
-    val density = getWindowMetricsDensity(windowMetrics) ?: fallbackMetrics.density.toDouble()
-    put("realWidthPixels", bounds?.width() ?: fallbackMetrics.widthPixels)
-    put("realHeightPixels", bounds?.height() ?: fallbackMetrics.heightPixels)
-    put("realDensity", density)
-    put("realDensityDpi", (density * DisplayMetrics.DENSITY_DEFAULT).roundToInt())
-    put("realXdpi", fallbackMetrics.xdpi)
-    put("realYdpi", fallbackMetrics.ydpi)
-  }
-
-  private fun JSONObject.putSizeMetrics(
-    currentMetrics: WindowMetrics?,
-    maximumMetrics: WindowMetrics?,
-    fallbackMetrics: DisplayMetrics,
-  ) {
-    val currentBounds = currentMetrics?.bounds
-    val maxBounds = maximumMetrics?.bounds
-
-    put("sizeWidth", currentBounds?.width() ?: fallbackMetrics.widthPixels)
-    put("sizeHeight", currentBounds?.height() ?: fallbackMetrics.heightPixels)
-    put("realSizeWidth", maxBounds?.width() ?: fallbackMetrics.widthPixels)
-    put("realSizeHeight", maxBounds?.height() ?: fallbackMetrics.heightPixels)
-  }
-
-  private fun JSONObject.putWindowBounds(
-    prefix: String,
-    windowMetrics: WindowMetrics?,
-    fallbackDensity: Double,
-  ) {
-    if (windowMetrics == null) return
-    val bounds = windowMetrics.bounds
-    val density = getWindowMetricsDensity(windowMetrics) ?: fallbackDensity
-    val safeDensity = if (density > 0) density else fallbackDensity
-    put("${prefix}BoundsWidth", bounds.width())
-    put("${prefix}BoundsHeight", bounds.height())
-    put("${prefix}BoundsAreaPx", bounds.width().toLong() * bounds.height().toLong())
-    put("${prefix}WidthDp", bounds.width() / safeDensity)
-    put("${prefix}HeightDp", bounds.height() / safeDensity)
-  }
-
   private fun JSONObject.putDisplayDetails(display: Display?) {
     display ?: return
-    put("refreshRate", display.refreshRate)
-    put("flags", display.flags)
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       display.hdrCapabilities?.let { capabilities ->
         put("hdrMaxLuminance", capabilities.desiredMaxLuminance)
-        put("hdrMinLuminance", capabilities.desiredMinLuminance)
-        put("hdrMaxAverageLuminance", capabilities.desiredMaxAverageLuminance)
       }
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       put("isHdr", display.isHdr)
       put("isWideColorGamut", display.isWideColorGamut)
-      display.preferredWideGamutColorSpace?.let { colorSpace ->
-        put("preferredWideGamutColorSpace", colorSpace.name)
-      }
     }
 
     val supportedRefreshRates = JSONArray()
@@ -159,20 +103,12 @@ class DisplayInfoCollector : BaseCollector() {
   }
 
   private fun JSONObject.putConfiguration(configuration: Configuration) {
-    put("screenLayout", configuration.screenLayout)
     put("screenLayoutSize", configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK)
-    put("screenLayoutLong", configuration.screenLayout and Configuration.SCREENLAYOUT_LONG_MASK)
-    put("screenLayoutDir", configuration.screenLayout and Configuration.SCREENLAYOUT_LAYOUTDIR_MASK)
     put("uiModeNight", configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
     put("screenWidthDp", configuration.screenWidthDp)
     put("screenHeightDp", configuration.screenHeightDp)
     put("smallestScreenWidthDp", configuration.smallestScreenWidthDp)
-    put("densityDpiConfig", configuration.densityDpi)
     put("fontScale", configuration.fontScale)
-
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      put("colorModeConfig", configuration.colorMode)
-    }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       val localesArray = JSONArray()
@@ -187,11 +123,15 @@ class DisplayInfoCollector : BaseCollector() {
     }
   }
 
-  private fun getWindowMetricsDensity(windowMetrics: WindowMetrics?): Double? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-    windowMetrics != null
+  private fun JSONObject.putRealMetrics(
+    maximumWindowMetrics: WindowMetrics?,
+    resourceMetrics: DisplayMetrics,
   ) {
-    windowMetrics.density.toDouble()
-  } else {
-    null
+    if (maximumWindowMetrics == null) return
+    val bounds = maximumWindowMetrics.bounds
+    put("realWidthPixels", bounds.width())
+    put("realHeightPixels", bounds.height())
+    put("realDensity", resourceMetrics.density)
+    put("realDensityDpi", resourceMetrics.densityDpi)
   }
 }

@@ -8,165 +8,44 @@ import org.json.JSONObject
 class DeviceInfoCollector : BaseCollector() {
   override suspend fun collect(context: Context): JSONObject = safeCollect {
     JSONObject().apply {
-      val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+      val resolver = context.contentResolver
+
+      val androidId = Settings.Secure.getString(resolver, Settings.Secure.ANDROID_ID)
       put("androidId", androidId ?: "unknown")
 
       put(
         "developmentSettingsEnabled",
-        Settings.Global.getInt(
-          context.contentResolver,
-          Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-          0,
-        ),
+        safeGetInt(resolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0),
       )
 
-      put(
-        "waitForDebugger",
-        Settings.Global.getInt(
-          context.contentResolver,
-          Settings.Global.WAIT_FOR_DEBUGGER,
-          0,
-        ),
-      )
+      put("bootCount", safeGetInt(resolver, Settings.Global.BOOT_COUNT, 0))
 
-      put(
-        "airplaneModeOn",
-        Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0),
-      )
+      put("deviceProvisioned", safeGetInt(resolver, Settings.Global.DEVICE_PROVISIONED, 0))
 
-      put(
-        "bootCount",
-        Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, 0),
-      )
-
-      put(
-        "deviceProvisioned",
-        Settings.Global.getInt(
-          context.contentResolver,
-          Settings.Global.DEVICE_PROVISIONED,
-          0,
-        ),
-      )
-
-      put(
-        "dataRoaming",
-        Settings.Global.getInt(context.contentResolver, Settings.Global.DATA_ROAMING, 0),
-      )
-
-      put(
-        "stayOnWhilePluggedIn",
-        Settings.Global.getInt(
-          context.contentResolver,
-          Settings.Global.STAY_ON_WHILE_PLUGGED_IN,
-          0,
-        ),
-      )
-
-      put(
-        "animatorDurationScale",
-        Settings.Global.getString(
-          context.contentResolver,
-          Settings.Global.ANIMATOR_DURATION_SCALE,
-        )
-          ?: "1.0",
-      )
+      put("stayOnWhilePluggedIn", safeGetInt(resolver, Settings.Global.STAY_ON_WHILE_PLUGGED_IN, 0))
 
       put(
         "transitionAnimationScale",
-        Settings.Global.getString(
-          context.contentResolver,
-          Settings.Global.TRANSITION_ANIMATION_SCALE,
-        )
-          ?: "1.0",
+        safeGetString(resolver, Settings.Global.TRANSITION_ANIMATION_SCALE, "1.0"),
       )
-
       put(
         "windowAnimationScale",
-        Settings.Global.getString(
-          context.contentResolver,
-          Settings.Global.WINDOW_ANIMATION_SCALE,
-        )
-          ?: "1.0",
+        safeGetString(resolver, Settings.Global.WINDOW_ANIMATION_SCALE, "1.0"),
       )
-
-      put(
-        "autoTime",
-        Settings.Global.getInt(context.contentResolver, Settings.Global.AUTO_TIME, 0),
-      )
-
-      put(
-        "autoTimeZone",
-        Settings.Global.getInt(context.contentResolver, Settings.Global.AUTO_TIME_ZONE, 0),
-      )
-
-      put(
-        "bluetoothOn",
-        Settings.Global.getInt(context.contentResolver, Settings.Global.BLUETOOTH_ON, 0),
-      )
-
-      put(
-        "bluetoothDiscoverability",
-        Settings.Global.getString(context.contentResolver, "bluetooth_discoverability"),
-      )
-
+      put("autoTime", safeGetInt(resolver, Settings.Global.AUTO_TIME, 0))
+      put("autoTimeZone", safeGetInt(resolver, Settings.Global.AUTO_TIME_ZONE, 0))
+      put("bluetoothDiscoverability", safeGetString(resolver, "bluetooth_discoverability"))
       put(
         "bluetoothDiscoverabilityTimeout",
-        Settings.Global.getString(
-          context.contentResolver,
-          "bluetooth_discoverability_timeout",
-        ),
+        safeGetString(resolver, "bluetooth_discoverability_timeout"),
       )
-
-      put(
-        "httpProxy",
-        Settings.Global.getString(context.contentResolver, Settings.Global.HTTP_PROXY),
-      )
-
-      put(
-        "networkPreference",
-        Settings.Global.getString(
-          context.contentResolver,
-          Settings.Global.NETWORK_PREFERENCE,
-        ),
-      )
-
-      put(
-        "usbMassStorageEnabled",
-        Settings.Global.getString(
-          context.contentResolver,
-          Settings.Global.USB_MASS_STORAGE_ENABLED,
-        ),
-      )
-
+      put("httpProxy", safeGetString(resolver, Settings.Global.HTTP_PROXY))
+      put("networkPreference", safeGetString(resolver, Settings.Global.NETWORK_PREFERENCE))
       put(
         "wifiNetworksAvailableNotificationOn",
-        Settings.Global.getString(
-          context.contentResolver,
-          Settings.Global.WIFI_NETWORKS_AVAILABLE_NOTIFICATION_ON,
-        ),
+        safeGetString(resolver, Settings.Global.WIFI_NETWORKS_AVAILABLE_NOTIFICATION_ON),
       )
-
-      put(
-        "alwaysFinishActivities",
-        Settings.Global.getInt(
-          context.contentResolver,
-          Settings.Global.ALWAYS_FINISH_ACTIVITIES,
-          0,
-        ),
-      )
-
-      put(
-        "modeRinger",
-        Settings.Global.getString(context.contentResolver, Settings.Global.MODE_RINGER),
-      )
-
-      put(
-        "airplaneModeRadios",
-        Settings.Global.getString(
-          context.contentResolver,
-          Settings.Global.AIRPLANE_MODE_RADIOS,
-        ),
-      )
+      put("airplaneModeRadios", safeGetString(resolver, Settings.Global.AIRPLANE_MODE_RADIOS))
     }
   }
 
@@ -175,4 +54,20 @@ class DeviceInfoCollector : BaseCollector() {
   override fun getRequiredPermissions(): List<String> = emptyList()
 
   override fun hasRequiredPermissions(context: Context): Boolean = true
+
+  private fun safeGetInt(
+    resolver: android.content.ContentResolver,
+    key: String,
+    default: Int?,
+  ): Any? = runCatching { Settings.Global.getInt(resolver, key) }.getOrElse {
+    if (it is SecurityException) "permission_denied" else default
+  }
+
+  private fun safeGetString(
+    resolver: android.content.ContentResolver,
+    key: String,
+    default: String? = null,
+  ): Any? = runCatching { Settings.Global.getString(resolver, key) }.getOrElse {
+    if (it is SecurityException) "permission_denied" else default
+  }
 }

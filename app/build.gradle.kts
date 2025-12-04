@@ -4,6 +4,65 @@ plugins {
   id("org.jetbrains.kotlin.plugin.compose")
 }
 
+import java.io.File
+import java.security.MessageDigest
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+
+abstract class GenerateDexHashTask : DefaultTask() {
+  @get:InputDirectory
+  abstract val dexDir: DirectoryProperty
+
+  @get:OutputDirectory
+  abstract val outputDir: DirectoryProperty
+
+  @get:Input
+  abstract val variantName: Property<String>
+
+  @TaskAction
+  fun generate() {
+    val digest = MessageDigest.getInstance("SHA-256")
+    val root = dexDir.get().asFile
+    val dexFiles =
+      if (root.exists()) root.walkTopDown().filter { it.isFile && it.extension == "dex" }.toList()
+      else emptyList()
+
+    val perFileHashes =
+      dexFiles.map { dex ->
+        val perDigest = MessageDigest.getInstance("SHA-256")
+        dex.inputStream().use { input ->
+          val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+          while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            perDigest.update(buffer, 0, read)
+          }
+        }
+        perDigest.digest().joinToString("") { b -> "%02x".format(b) }
+      }
+
+    val hash =
+      if (perFileHashes.isNotEmpty()) {
+        val combined = MessageDigest.getInstance("SHA-256")
+        perFileHashes.sorted().forEach { hex -> combined.update(hex.toByteArray()) }
+        combined.digest().joinToString("") { b -> "%02x".format(b) }
+      } else {
+        ""
+      }
+
+    val assetsRoot = outputDir.get().asFile
+    assetsRoot.mkdirs()
+    val assetFile = assetsRoot.resolve("dex_integrity_hash.txt")
+    assetFile.writeText(hash)
+  }
+}
+
 android {
   namespace = "com.protosdk.demo"
   compileSdk = 35
@@ -48,6 +107,36 @@ android {
     resources {
       excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+  }
+}
+
+androidComponents {
+  onVariants { variant ->
+    val generatedAssetsDir = layout.buildDirectory.dir("generated/dexHash/${variant.name}/assets")
+    val capName = variant.name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+    val generateDexHashTask =
+      tasks.register("generate${capName}DexHash", GenerateDexHashTask::class.java) {
+        // Use merged dex outputs (covers mergeDex and mergeProjectDex variants)
+        dexDir.set(layout.buildDirectory.dir("intermediates/dex/${variant.name}"))
+        outputDir.set(generatedAssetsDir)
+        variantName.set(variant.name)
+
+        // Depend on whichever merge dex tasks exist for this variant to avoid implicit access warnings.
+        listOf(
+          "mergeDex$capName",
+          "mergeProjectDex$capName",
+          "mergeExtDex$capName",
+          "mergeLibDex$capName",
+        ).forEach { taskName ->
+          runCatching { tasks.named(taskName) }.getOrNull()?.let { dependsOn(it) }
+        }
+      }
+
+    variant.sources.assets?.addGeneratedSourceDirectory(
+      generateDexHashTask,
+      GenerateDexHashTask::outputDir,
+    )
   }
 }
 
