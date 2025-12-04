@@ -4,12 +4,11 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.internal.GpuSignalBus
 import com.protosdk.sdk.fingerprint.internal.GpuStringDecoder
-import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.nativebridge.GpuDetectionBridge
 import java.util.concurrent.Executors
-import kotlin.math.abs
 import kotlin.math.min
 import kotlin.random.Random
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,9 +21,10 @@ import org.json.JSONObject
 
 class GpuInfoCollector : BaseCollector() {
   private val gpuDispatcher: CoroutineDispatcher =
-    Executors.newSingleThreadExecutor { runnable ->
-      Thread(runnable, "ProtoGpuCollector").apply { isDaemon = true }
-    }.asCoroutineDispatcher()
+          Executors.newSingleThreadExecutor { runnable ->
+                    Thread(runnable, "ProtoGpuCollector").apply { isDaemon = true }
+                  }
+                  .asCoroutineDispatcher()
 
   private val cachingEnabled = false
   @Volatile private var cachedResult: JSONObject? = null
@@ -36,81 +36,78 @@ class GpuInfoCollector : BaseCollector() {
   override fun getRequiredPermissions(): List<String> = emptyList()
 
   override fun isSupported(context: Context): Boolean =
-    context.packageManager.hasSystemFeature(PackageManager.FEATURE_OPENGLES_EXTENSION_PACK) ||
-      Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
+          context.packageManager.hasSystemFeature(PackageManager.FEATURE_OPENGLES_EXTENSION_PACK) ||
+                  Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
 
-  override suspend fun collect(context: Context): JSONObject = withContext(gpuDispatcher) {
-    if (cachingEnabled) {
-      cachedResult?.let { return@withContext it }
-    }
+  override suspend fun collect(context: Context): JSONObject =
+          withContext(gpuDispatcher) {
+            if (cachingEnabled) {
+              cachedResult?.let {
+                return@withContext it
+              }
+            }
 
-    val result =
-      try {
-        withTimeout(200L) {
-          safeCollect { buildPayload(context) }
-        }
-      } catch (_: TimeoutCancellationException) {
-        buildErrorJson("GPU fingerprinting timed out after 200ms")
-      }
+            val result =
+                    try {
+                      withTimeout(200L) { safeCollect { buildPayload(context) } }
+                    } catch (_: TimeoutCancellationException) {
+                      buildErrorJson("GPU fingerprinting timed out after 200ms")
+                    }
 
-    if (cachingEnabled && !result.has("error")) {
-      synchronized(cacheLock) { cachedResult = result }
-    }
+            if (cachingEnabled && !result.has("error")) {
+              synchronized(cacheLock) { cachedResult = result }
+            }
 
-    result
-  }
+            result
+          }
 
   private fun buildPayload(context: Context): JSONObject {
     val snapshot = collectSnapshot()
     val extensions = snapshot.extensions.distinct()
     val virtualizationIndicators = mutableListOf<String>()
 
-    val rendererMatch = GpuStringDecoder.matchPattern(snapshot.renderer, GpuStringDecoder.rendererPatterns())
+    val rendererMatch =
+            GpuStringDecoder.matchPattern(snapshot.renderer, GpuStringDecoder.rendererPatterns())
     if (rendererMatch != null) {
       virtualizationIndicators += "renderer_pattern:${rendererMatch.value}"
     }
 
-    val vendorMatch = GpuStringDecoder.matchPattern(snapshot.vendor, GpuStringDecoder.vendorPatterns())
+    val vendorMatch =
+            GpuStringDecoder.matchPattern(snapshot.vendor, GpuStringDecoder.vendorPatterns())
     if (vendorMatch != null) {
       virtualizationIndicators += "vendor_pattern:${vendorMatch.value}"
     }
 
-    val eglMatch = GpuStringDecoder.matchPattern(snapshot.eglVendor, GpuStringDecoder.eglVendorPatterns())
+    val eglMatch =
+            GpuStringDecoder.matchPattern(snapshot.eglVendor, GpuStringDecoder.eglVendorPatterns())
     if (eglMatch != null) {
       virtualizationIndicators += "egl_vendor_pattern:${eglMatch.value}"
     }
 
-    val extensionMatches = extensions.mapNotNull { ext ->
-      val match = GpuStringDecoder.matchPattern(ext, GpuStringDecoder.extensionPatterns())
-      match?.let { "extension_pattern:${it.value}" }
-    }
+    val extensionMatches =
+            extensions.mapNotNull { ext ->
+              val match = GpuStringDecoder.matchPattern(ext, GpuStringDecoder.extensionPatterns())
+              match?.let { "extension_pattern:${it.value}" }
+            }
     virtualizationIndicators += extensionMatches
 
     val rendererLower = snapshot.renderer.lowercase()
-    val softwareTokens = listOf("swiftshader", "llvmpipe", "mesa", "software", "angle", "virtualbox")
+    val softwareTokens =
+            listOf("swiftshader", "llvmpipe", "mesa", "software", "angle", "virtualbox")
     if (softwareTokens.any { rendererLower.contains(it) }) {
       virtualizationIndicators += "software_renderer_signature"
     }
 
-    val extensionOutlier = extensions.firstOrNull { entry ->
-      entry.contains("GL_ARB", ignoreCase = true) ||
-        entry.contains("GL_EXT_texture_filter_anisotropic_desktop", ignoreCase = true)
-    }
+    val extensionOutlier =
+            extensions.firstOrNull { entry ->
+              entry.contains("GL_ARB", ignoreCase = true) ||
+                      entry.contains("GL_EXT_texture_filter_anisotropic_desktop", ignoreCase = true)
+            }
     if (extensionOutlier != null) {
       virtualizationIndicators += "desktop_extension:$extensionOutlier"
     }
 
-    val memTotalKb = snapshot.memInfo.getOrElse(0) { 0 }
-    val memCurrentKb = snapshot.memInfo.getOrElse(1) { 0 }
-    val memAvailableKb = snapshot.memInfo.getOrElse(2) { 0 }
     val systemRamMb = getTotalRamMb(context)
-    if (memTotalKb > 0 && systemRamMb > 0) {
-      val memMb = memTotalKb / 1024.0
-      val ratio = memMb / systemRamMb.toDouble()
-      if (ratio > 1.5) {
-        virtualizationIndicators += "gpu_memory_ratio:${"%.2f".format(ratio)}"
-      }
-    }
 
     val apiLevel = Build.VERSION.SDK_INT
     if (!snapshot.vulkanSupported && apiLevel >= Build.VERSION_CODES.Q) {
@@ -134,18 +131,19 @@ class GpuInfoCollector : BaseCollector() {
     }
 
     if (snapshot.vendor.contains("google", ignoreCase = true) &&
-      !Build.MANUFACTURER.contains("google", ignoreCase = true)
+                    !Build.MANUFACTURER.contains("google", ignoreCase = true)
     ) {
       virtualizationIndicators += "vendor_mismatch_google"
     }
 
     val indicatorSet = virtualizationIndicators.filter { it.isNotBlank() }.toSet()
-    val highConfidence = indicatorSet.count { indicator ->
-      indicator.startsWith("renderer_pattern") ||
-        indicator.startsWith("vendor_pattern") ||
-        indicator.startsWith("egl_vendor_pattern") ||
-        indicator.startsWith("software_renderer")
-    }
+    val highConfidence =
+            indicatorSet.count { indicator ->
+              indicator.startsWith("renderer_pattern") ||
+                      indicator.startsWith("vendor_pattern") ||
+                      indicator.startsWith("egl_vendor_pattern") ||
+                      indicator.startsWith("software_renderer")
+            }
 
     var confidenceScore = highConfidence * 0.3 + indicatorSet.size * 0.15
     if (!snapshot.vulkanSupported && apiLevel >= Build.VERSION_CODES.Q) {
@@ -160,9 +158,6 @@ class GpuInfoCollector : BaseCollector() {
     if (snapshot.microBenchmarkMs > 8.0) {
       confidenceScore += 0.1
     }
-    if (memTotalKb > 0 && memAvailableKb > 0 && abs(memTotalKb - memAvailableKb) < 1024) {
-      confidenceScore += 0.05
-    }
     confidenceScore = min(1.0, confidenceScore)
     val suspectedVirtualization = confidenceScore >= 0.65
 
@@ -173,67 +168,53 @@ class GpuInfoCollector : BaseCollector() {
     if (snapshot.maxTextureSize > 0) hardwareChecksPassed += 1
     if (snapshot.computeInvocations > 0) hardwareChecksPassed += 1
     if (snapshot.vulkanSupported) hardwareChecksPassed += 1
-    if (memTotalKb > 0) hardwareChecksPassed += 1
 
-    val extensionJson = JSONArray().apply {
-      extensions.take(64).forEach { put(it) }
-    }
+    val extensionJson = JSONArray().apply { extensions.take(15).forEach { put(it) } }
 
-    val eglConfigJson = JSONObject().apply {
-      put("red", snapshot.eglConfig.getOrElse(0) { 0 })
-      put("green", snapshot.eglConfig.getOrElse(1) { 0 })
-      put("blue", snapshot.eglConfig.getOrElse(2) { 0 })
-      put("alpha", snapshot.eglConfig.getOrElse(3) { 0 })
-      put("depth", snapshot.eglConfig.getOrElse(4) { 0 })
-      put("stencil", snapshot.eglConfig.getOrElse(5) { 0 })
-    }
-
-    val memJson = JSONObject().apply {
-      put("totalKb", memTotalKb)
-      put("currentKb", memCurrentKb)
-      put("availableKb", memAvailableKb)
-    }
-
-    val payload = JSONObject().apply {
-      put("renderer", snapshot.renderer)
-      put("vendor", snapshot.vendor)
-      put("version", snapshot.version)
-      put("eglVendor", snapshot.eglVendor)
-      put("eglConfig", eglConfigJson)
-      put("extensions", extensionJson)
-      put("extensionCount", extensions.size)
-      put("maxTextureSize", snapshot.maxTextureSize)
-      put("computeSupported", snapshot.computeInvocations > 0)
-      put("computeWorkGroupInvocations", snapshot.computeInvocations)
-      put("gpuMemoryKb", memJson)
-      put("systemRamMb", systemRamMb)
-      put("microBenchmarkMs", snapshot.microBenchmarkMs)
-      put("vulkanSupported", snapshot.vulkanSupported)
-      put("hardwareChecksPassed", hardwareChecksPassed)
-      put("suspiciousIndicators", JSONArray().apply { indicatorSet.forEach { put(it) } })
-      put("confidenceScore", confidenceScore)
-      put("suspectedVirtualization", suspectedVirtualization)
-      put("timestamp", System.currentTimeMillis())
-    }
+    val payload =
+            JSONObject().apply {
+              put("renderer", snapshot.renderer)
+              put("vendor", snapshot.vendor)
+              put("version", snapshot.version)
+              put("eglVendor", snapshot.eglVendor)
+              put("extensions", extensionJson)
+              put("maxTextureSize", snapshot.maxTextureSize)
+              put("computeSupported", snapshot.computeInvocations > 0)
+              put("computeWorkGroupInvocations", snapshot.computeInvocations)
+              put("systemRamMb", systemRamMb)
+              put("vulkanSupported", snapshot.vulkanSupported)
+              put("hardwareChecksPassed", hardwareChecksPassed)
+              put("suspiciousIndicators", JSONArray().apply { indicatorSet.forEach { put(it) } })
+              put("confidenceScore", confidenceScore)
+              put("suspectedVirtualization", suspectedVirtualization)
+            }
     GpuSignalBus.updateFromJson(payload)
     return payload
   }
 
   private fun collectSnapshot(): Snapshot {
     val snapshot = Snapshot()
-    val operations = listOf<(Snapshot) -> Unit>(
-      { it.renderer = GpuDetectionBridge.nativeGetGpuRenderer() },
-      { it.vendor = GpuDetectionBridge.nativeGetGpuVendor() },
-      { it.version = GpuDetectionBridge.nativeGetGpuVersion() },
-      { it.extensions = GpuDetectionBridge.nativeGetGpuExtensions().filter { value -> value.isNotBlank() } },
-      { it.eglVendor = GpuDetectionBridge.nativeGetEglVendor() },
-      { it.eglConfig = GpuDetectionBridge.nativeGetEglConfig() },
-      { it.memInfo = GpuDetectionBridge.nativeGetGpuMemoryInfo() },
-      { it.maxTextureSize = GpuDetectionBridge.nativeGetMaxTextureSize() },
-      { it.computeInvocations = GpuDetectionBridge.nativeGetComputeWorkGroupInvocations() },
-      { it.microBenchmarkMs = GpuDetectionBridge.nativeRunMicroBenchmark() },
-      { it.vulkanSupported = GpuDetectionBridge.nativeCheckVulkan() },
-    ).shuffled(random)
+    val operations =
+            listOf<(Snapshot) -> Unit>(
+                            { it.renderer = GpuDetectionBridge.nativeGetGpuRenderer() },
+                            { it.vendor = GpuDetectionBridge.nativeGetGpuVendor() },
+                            { it.version = GpuDetectionBridge.nativeGetGpuVersion() },
+                            {
+                              it.extensions =
+                                      GpuDetectionBridge.nativeGetGpuExtensions().filter { value ->
+                                        value.isNotBlank()
+                                      }
+                            },
+                            { it.eglVendor = GpuDetectionBridge.nativeGetEglVendor() },
+                            { it.eglConfig = GpuDetectionBridge.nativeGetEglConfig() },
+                            { it.maxTextureSize = GpuDetectionBridge.nativeGetMaxTextureSize() },
+                            {
+                              it.computeInvocations =
+                                      GpuDetectionBridge.nativeGetComputeWorkGroupInvocations()
+                            },
+                            { it.vulkanSupported = GpuDetectionBridge.nativeCheckVulkan() },
+                    )
+                    .shuffled(random)
 
     operations.forEach { operation ->
       try {
@@ -256,22 +237,22 @@ class GpuInfoCollector : BaseCollector() {
     }
   }
 
-  private fun buildErrorJson(message: String): JSONObject = JSONObject().apply {
-    put("error", message)
-    put("permissionRequired", false)
-  }
+  private fun buildErrorJson(message: String): JSONObject =
+          JSONObject().apply {
+            put("error", message)
+            put("permissionRequired", false)
+          }
 
   private data class Snapshot(
-    var renderer: String = "",
-    var vendor: String = "",
-    var version: String = "",
-    var extensions: List<String> = emptyList(),
-    var eglVendor: String = "",
-    var eglConfig: IntArray = intArrayOf(),
-    var memInfo: IntArray = intArrayOf(),
-    var maxTextureSize: Int = 0,
-    var computeInvocations: Int = 0,
-    var microBenchmarkMs: Double = 0.0,
-    var vulkanSupported: Boolean = false,
+          var renderer: String = "",
+          var vendor: String = "",
+          var version: String = "",
+          var extensions: List<String> = emptyList(),
+          var eglVendor: String = "",
+          var eglConfig: IntArray = intArrayOf(),
+          var maxTextureSize: Int = 0,
+          var computeInvocations: Int = 0,
+          var microBenchmarkMs: Double = 0.0,
+          var vulkanSupported: Boolean = false,
   )
 }

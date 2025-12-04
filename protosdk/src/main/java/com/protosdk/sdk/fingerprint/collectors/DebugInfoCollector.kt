@@ -11,29 +11,14 @@ class DebugInfoCollector : BaseCollector() {
   override suspend fun collect(context: Context): JSONObject = safeCollect {
     JSONObject().apply {
       put(
-        "adbEnabled",
-        SecurityCollectorUtils.readGlobalSetting(
-          context,
-          android.provider.Settings.Global.ADB_ENABLED,
-        ),
-      )
-      put(
-        "developmentSettingsEnabled",
-        SecurityCollectorUtils.readGlobalSetting(
-          context,
-          android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-        ),
-      )
-      put(
-        "waitForDebugger",
-        SecurityCollectorUtils.readGlobalSetting(
-          context,
-          android.provider.Settings.Global.WAIT_FOR_DEBUGGER,
-        ),
+              "adbEnabled",
+              SecurityCollectorUtils.readGlobalSetting(
+                      context,
+                      android.provider.Settings.Global.ADB_ENABLED,
+              ),
       )
 
       put("isDebuggerConnected", Debug.isDebuggerConnected())
-      put("isDebuggerWaiting", Debug.waitingForDebugger())
 
       // val memoryInfo = Debug.MemoryInfo().also { Debug.getMemoryInfo(it) }
       // put(

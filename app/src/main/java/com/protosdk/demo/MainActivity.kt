@@ -11,6 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import com.protosdk.demo.ui.theme.ProtoSDKDemoTheme
 import com.protosdk.sdk.ProtoSDK
 import kotlinx.coroutines.launch
@@ -144,15 +147,31 @@ fun SimpleDemoScreen(protoSDK: ProtoSDK) {
     }
 
     Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
-      Box(modifier = Modifier.fillMaxSize()) {
-        Text(
-          text = resultText,
-          modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-          style = MaterialTheme.typography.bodyMedium,
-        )
+      val clipboardManager = LocalClipboardManager.current
+      Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+          Text(text = "Collected Data", style = MaterialTheme.typography.titleSmall)
+          TextButton(
+            onClick = { clipboardManager.setText(AnnotatedString(resultText)) },
+            enabled = resultText.isNotBlank(),
+          ) {
+            Text("Copy")
+          }
+        }
+        SelectionContainer {
+          Text(
+            text = resultText,
+            modifier = Modifier
+              .fillMaxSize()
+              .verticalScroll(rememberScrollState())
+              .padding(horizontal = 16.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.bodyMedium,
+          )
+        }
       }
     }
   }

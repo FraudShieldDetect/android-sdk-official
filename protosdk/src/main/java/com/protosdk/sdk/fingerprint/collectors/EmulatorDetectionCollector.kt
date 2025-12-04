@@ -10,40 +10,41 @@ import android.os.Build
 import android.os.Debug
 import android.os.SystemClock
 import android.telephony.TelephonyManager
+import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.internal.EmulatorStringDecoder
 import com.protosdk.sdk.fingerprint.internal.GpuSignalBus
 import com.protosdk.sdk.fingerprint.internal.SensorSignalBus
-import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import com.protosdk.sdk.fingerprint.nativebridge.EmulatorDetectionBridge
+import java.security.SecureRandom
+import java.util.Locale
+import kotlin.math.min
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
-import java.security.SecureRandom
-import java.util.Locale
-import kotlin.math.min
 
 class EmulatorDetectionCollector(
-  private val bridge: EmulatorDetectionBridge = EmulatorDetectionBridge,
-  private val random: SecureRandom = SecureRandom(),
+        private val bridge: EmulatorDetectionBridge = EmulatorDetectionBridge,
+        private val random: SecureRandom = SecureRandom(),
 ) : BaseCollector() {
 
-  override suspend fun collect(context: Context): JSONObject = withContext(Dispatchers.IO) {
-    try {
-      withTimeout(150L) { safeCollect { performDetection(context) } }
-    } catch (timeout: TimeoutCancellationException) {
-      JSONObject().apply {
-        put("emulatorIndicators", JSONArray())
-        put("isEmulator", false)
-        put("hardwareChecksPassed", 0)
-        put("confidenceScore", 0.0)
-        put("antiDebugTriggered", false)
-        put("timeout", true)
-      }
-    }
-  }
+  override suspend fun collect(context: Context): JSONObject =
+          withContext(Dispatchers.IO) {
+            try {
+              withTimeout(150L) { safeCollect { performDetection(context) } }
+            } catch (timeout: TimeoutCancellationException) {
+              JSONObject().apply {
+                put("emulatorIndicators", JSONArray())
+                put("isEmulator", false)
+                put("hardwareChecksPassed", 0)
+                put("confidenceScore", 0.0)
+                put("antiDebugTriggered", false)
+                put("timeout", true)
+              }
+            }
+          }
 
   private fun performDetection(context: Context): JSONObject {
     val indicators = linkedSetOf<String>()
@@ -64,9 +65,10 @@ class EmulatorDetectionCollector(
     val cpuInfo = bridge.nativeReadCpuInfo().lowercase(locale)
     val arpTable = bridge.nativeReadProc("/proc/net/arp").lowercase(locale)
     val networkIfaces = bridge.nativeGetNetworkIfaces().toList()
-    val propertyMap = EmulatorStringDecoder.properties().associateWith { key ->
-      bridge.nativeGetProperty(key)
-    }
+    val propertyMap =
+            EmulatorStringDecoder.properties().associateWith { key ->
+              bridge.nativeGetProperty(key)
+            }
     val deviceTokens = EmulatorStringDecoder.devices().map { it.lowercase(locale) }
     val gpuSignals = GpuSignalBus.latest()
 
@@ -82,21 +84,25 @@ class EmulatorDetectionCollector(
 
     operations += {
       val descriptor =
-        listOf(
-          Build.FINGERPRINT,
-          Build.HARDWARE,
-          Build.MODEL,
-          Build.MANUFACTURER,
-          Build.BRAND,
-          Build.DEVICE,
-          Build.PRODUCT,
-          Build.BOARD,
-        )
-          .joinToString(separator = " ")
-          .lowercase(locale)
+              listOf(
+                              Build.FINGERPRINT,
+                              Build.HARDWARE,
+                              Build.MODEL,
+                              Build.MANUFACTURER,
+                              Build.BRAND,
+                              Build.DEVICE,
+                              Build.PRODUCT,
+                              Build.BOARD,
+                      )
+                      .joinToString(separator = " ")
+                      .lowercase(locale)
       deviceTokens.forEach { token ->
         if (token.isNotBlank() && descriptor.contains(token)) {
-          recordIndicator("device_tag:$token", WEIGHT_MEDIUM, highConfidence = token in HIGH_CONF_DEVICE_TOKENS)
+          recordIndicator(
+                  "device_tag:$token",
+                  WEIGHT_MEDIUM,
+                  highConfidence = token in HIGH_CONF_DEVICE_TOKENS
+          )
         }
       }
     }
@@ -106,17 +112,15 @@ class EmulatorDetectionCollector(
         val lower = value.lowercase(locale)
         when (key) {
           "ro.kernel.qemu" ->
-            if (lower == "1" || lower == "true") {
-              recordIndicator("property:$key=$lower", WEIGHT_HIGH, highConfidence = true)
-            }
+                  if (lower == "1" || lower == "true") {
+                    recordIndicator("property:$key=$lower", WEIGHT_HIGH, highConfidence = true)
+                  }
           "ro.product.manufacturer" ->
-            if (lower in suspiciousManufacturers) {
-              recordIndicator("property:$key=$lower", WEIGHT_MEDIUM)
-            }
+                  if (lower in suspiciousManufacturers) {
+                    recordIndicator("property:$key=$lower", WEIGHT_MEDIUM)
+                  }
           else -> {
-            val hit = deviceTokens.any { token ->
-              token.isNotBlank() && lower.contains(token)
-            }
+            val hit = deviceTokens.any { token -> token.isNotBlank() && lower.contains(token) }
             if (hit) {
               recordIndicator("property:$key=$lower", WEIGHT_MEDIUM)
             }
@@ -133,7 +137,9 @@ class EmulatorDetectionCollector(
           recordIndicator("proc:$token", WEIGHT_MEDIUM)
         }
       }
-      if (cpuInfo.contains("intel") && Build.SUPPORTED_ABIS.any { it.lowercase(locale).contains("arm") }) {
+      if (cpuInfo.contains("intel") &&
+                      Build.SUPPORTED_ABIS.any { it.lowercase(locale).contains("arm") }
+      ) {
         recordIndicator("cpu:mixed_vendor", WEIGHT_MEDIUM, highConfidence = true)
       }
     }
@@ -188,17 +194,21 @@ class EmulatorDetectionCollector(
           recordIndicator("sensorbus:$label", WEIGHT_LOW)
         }
         recordIndicator(
-          "sensorbus:confidence",
-          sensorSignals.confidenceScore.coerceIn(0.0, 1.0),
-          highConfidence = sensorSignals.suspectedEmulation,
+                "sensorbus:confidence",
+                sensorSignals.confidenceScore.coerceIn(0.0, 1.0),
+                highConfidence = sensorSignals.suspectedEmulation,
         )
-        if (!sensorSignals.suspectedEmulation && sensorSignals.missingCoreCount == 0 && sensorSignals.totalSensors > 5) {
+        if (!sensorSignals.suspectedEmulation &&
+                        sensorSignals.missingCoreCount == 0 &&
+                        sensorSignals.totalSensors > 5
+        ) {
           hardwareChecksPassed += 1
         }
       } else {
-        val sensorsHealthy = evaluateSensors(context) { label, weight, highConfidence ->
-          recordIndicator(label, weight, highConfidence)
-        }
+        val sensorsHealthy =
+                evaluateSensors(context) { label, weight, highConfidence ->
+                  recordIndicator(label, weight, highConfidence)
+                }
         if (sensorsHealthy) {
           hardwareChecksPassed += 1
         }
@@ -265,11 +275,6 @@ class EmulatorDetectionCollector(
       put("confidenceScore", String.format(locale, "%.2f", confidenceScore).toDouble())
       put("antiDebugTriggered", antiDebugTriggered)
       put("highConfidenceSignals", highConfidenceSignals)
-      put("gpuSignalsApplied", gpuSignals != null)
-      gpuSignals?.let { signals ->
-        put("gpuSignalConfidence", String.format(locale, "%.2f", signals.confidenceScore).toDouble())
-        put("gpuSignalAgeMs", (System.currentTimeMillis() - signals.timestampMs).coerceAtLeast(0))
-      }
     }
   }
 
@@ -286,13 +291,14 @@ class EmulatorDetectionCollector(
       }
     }
     val hasVariance = currentSamples.distinct().size > 1
-    val chargeCounter = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+    val chargeCounter =
+            batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
     val counterValid =
-      if (chargeCounter == Int.MIN_VALUE) {
-        true
-      } else {
-        chargeCounter != 0
-      }
+            if (chargeCounter == Int.MIN_VALUE) {
+              true
+            } else {
+              chargeCounter != 0
+            }
     if ((currentSamples.isEmpty() || hasVariance) && counterValid) {
       return true to null
     }
@@ -304,19 +310,19 @@ class EmulatorDetectionCollector(
   private fun evaluateImei(context: Context): ImeiStatus? {
     val telephony = context.getSystemService(TelephonyManager::class.java) ?: return null
     val hasPermission =
-      context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) ==
-        PackageManager.PERMISSION_GRANTED
+            context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) ==
+                    PackageManager.PERMISSION_GRANTED
     if (!hasPermission) return null
-    val raw = try {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        telephony.imei
-      } else {
-        @Suppress("DEPRECATION")
-        telephony.deviceId
-      }
-    } catch (_: SecurityException) {
-      null
-    }
+    val raw =
+            try {
+              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                telephony.imei
+              } else {
+                @Suppress("DEPRECATION") telephony.deviceId
+              }
+            } catch (_: SecurityException) {
+              null
+            }
     val imei = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
     if (imei.any { !it.isDigit() }) {
       return ImeiStatus(false, "imei_non_digit")
@@ -350,32 +356,44 @@ class EmulatorDetectionCollector(
   }
 
   private fun evaluateSensors(
-    context: Context,
-    record: (String, Double, Boolean) -> Unit,
+          context: Context,
+          record: (String, Double, Boolean) -> Unit,
   ): Boolean {
-    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-      ?: return false
+    val sensorManager =
+            context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return false
 
     val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
-    val missingCore = listOf(
-      Sensor.TYPE_ACCELEROMETER,
-      Sensor.TYPE_GYROSCOPE,
-      Sensor.TYPE_MAGNETIC_FIELD,
-    ).count { sensorManager.getDefaultSensor(it) == null }
+    val missingCore =
+            listOf(
+                            Sensor.TYPE_ACCELEROMETER,
+                            Sensor.TYPE_GYROSCOPE,
+                            Sensor.TYPE_MAGNETIC_FIELD,
+                    )
+                    .count { sensorManager.getDefaultSensor(it) == null }
 
     val vendorCounts = sensors.groupingBy { it.vendor.lowercase(Locale.ROOT) }.eachCount()
     val uniqueVendors = vendorCounts.size
     val uniqueTypes = sensors.map { it.type }.distinct().size
 
-    val goldfishVendorHit = vendorCounts.keys.any { it.contains("goldfish") || it.contains("aosp") || it.contains("android open source project") }
-    val emulatorNameHit = sensors.any {
-      val n = it.name.lowercase(Locale.ROOT)
-      n.contains("goldfish") || n.contains("emulator") || n.contains("android sdk")
-    }
+    val goldfishVendorHit =
+            vendorCounts.keys.any {
+              it.contains("goldfish") ||
+                      it.contains("aosp") ||
+                      it.contains("android open source project")
+            }
+    val emulatorNameHit =
+            sensors.any {
+              val n = it.name.lowercase(Locale.ROOT)
+              n.contains("goldfish") || n.contains("emulator") || n.contains("android sdk")
+            }
     val vendorAllSame = uniqueVendors == 1 && sensors.isNotEmpty()
-    val onlyAospVendors = sensors.isNotEmpty() && vendorCounts.keys.all {
-      it.contains("android open source project") || it.contains("aosp") || it.contains("goldfish")
-    }
+    val onlyAospVendors =
+            sensors.isNotEmpty() &&
+                    vendorCounts.keys.all {
+                      it.contains("android open source project") ||
+                              it.contains("aosp") ||
+                              it.contains("goldfish")
+                    }
     val veryFewSensors = sensors.size <= 5
     val veryLowUniqueTypes = uniqueTypes <= 4
 
@@ -387,7 +405,9 @@ class EmulatorDetectionCollector(
     if (vendorAllSame) record("sensors:single_vendor", WEIGHT_LOW, false)
     if (onlyAospVendors) record("sensors:aosp_only_vendors", WEIGHT_HIGH, true)
     if (veryLowUniqueTypes) record("sensors:few_unique_types", WEIGHT_LOW, false)
-    if (Build.FINGERPRINT.contains("generic", ignoreCase = true) || Build.FINGERPRINT.contains("sdk_gphone", ignoreCase = true)) {
+    if (Build.FINGERPRINT.contains("generic", ignoreCase = true) ||
+                    Build.FINGERPRINT.contains("sdk_gphone", ignoreCase = true)
+    ) {
       record("sensors:fingerprint_generic", WEIGHT_MEDIUM, false)
     }
     val hardware = Build.HARDWARE.lowercase(Locale.ROOT)
@@ -400,7 +420,8 @@ class EmulatorDetectionCollector(
     }
 
     // Consider sensors healthy if there is a reasonable set and no core misses
-    val sensorsHealthy = sensors.size > 5 && missingCore == 0 && !goldfishVendorHit && !emulatorNameHit
+    val sensorsHealthy =
+            sensors.size > 5 && missingCore == 0 && !goldfishVendorHit && !emulatorNameHit
     return sensorsHealthy
   }
 
