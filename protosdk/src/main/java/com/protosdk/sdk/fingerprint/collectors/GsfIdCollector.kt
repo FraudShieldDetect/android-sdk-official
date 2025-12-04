@@ -31,10 +31,8 @@ class GsfIdCollector : BaseCollector() {
 
   override fun getCollectorName(): String = "GsfIdCollector"
 
-  override fun getRequiredPermissions(): List<String> =
-          listOf("com.google.android.providers.gsf.permission.READ_GSERVICES")
+  override fun getRequiredPermissions(): List<String> = listOf("com.google.android.providers.gsf.permission.READ_GSERVICES")
 
-  override fun isSupported(context: Context): Boolean =
-          context.packageManager.resolveContentProvider("com.google.android.gsf.gservices", 0) !=
-                  null
+  override fun isSupported(context: Context): Boolean = context.packageManager.resolveContentProvider("com.google.android.gsf.gservices", 0) !=
+    null
 }

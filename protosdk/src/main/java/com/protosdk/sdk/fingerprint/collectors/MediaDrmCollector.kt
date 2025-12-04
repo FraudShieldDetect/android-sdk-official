@@ -3,9 +3,9 @@ package com.protosdk.sdk.fingerprint.collectors
 import android.media.MediaDrm
 import android.os.Build
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
+import org.json.JSONObject
 import java.security.MessageDigest
 import java.util.UUID
-import org.json.JSONObject
 
 private const val WIDEVINE_UUID_MSB = -0x121074568629b532L
 private const val WIDEVINE_UUID_LSB = -0x5c37d8232ae2de13L
@@ -28,7 +28,8 @@ class MediaDrmCollector : BaseCollector() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
       mediaDrm.close()
     } else {
-      @Suppress("DEPRECATION") mediaDrm.release()
+      @Suppress("DEPRECATION")
+      mediaDrm.release()
     }
   }
 
@@ -36,8 +37,7 @@ class MediaDrmCollector : BaseCollector() {
 
   override fun getRequiredPermissions(): List<String> = emptyList()
 
-  override fun isSupported(context: android.content.Context): Boolean =
-          Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
+  override fun isSupported(context: android.content.Context): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
 }
 
 private fun ByteArray.toHexString(): String = joinToString("") { b -> "%02x".format(b) }

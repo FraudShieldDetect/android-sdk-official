@@ -11,11 +11,11 @@ class DebugInfoCollector : BaseCollector() {
   override suspend fun collect(context: Context): JSONObject = safeCollect {
     JSONObject().apply {
       put(
-              "adbEnabled",
-              SecurityCollectorUtils.readGlobalSetting(
-                      context,
-                      android.provider.Settings.Global.ADB_ENABLED,
-              ),
+        "adbEnabled",
+        SecurityCollectorUtils.readGlobalSetting(
+          context,
+          android.provider.Settings.Global.ADB_ENABLED,
+        ),
       )
 
       put("isDebuggerConnected", Debug.isDebuggerConnected())

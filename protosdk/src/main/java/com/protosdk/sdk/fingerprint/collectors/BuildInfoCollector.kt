@@ -23,14 +23,14 @@ class BuildInfoCollector : BaseCollector() {
       put("model", Build.MODEL)
       put("product", Build.PRODUCT)
       put(
-              "serial",
-              try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                  Build.getSerial()
-                } else {
-                  Build.SERIAL
-                }
-              } catch (e: Exception) {},
+        "serial",
+        try {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Build.getSerial()
+          } else {
+            Build.SERIAL
+          }
+        } catch (e: Exception) {},
       )
       put("tags", Build.TAGS)
       put("time", Build.TIME)
@@ -39,10 +39,10 @@ class BuildInfoCollector : BaseCollector() {
 
       // Radio information
       put(
-              "radioVersion",
-              try {
-                Build.getRadioVersion()
-              } catch (e: Exception) {},
+        "radioVersion",
+        try {
+          Build.getRadioVersion()
+        } catch (e: Exception) {},
       )
 
       // CPU ABI information

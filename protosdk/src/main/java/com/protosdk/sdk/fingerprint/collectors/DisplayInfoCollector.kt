@@ -39,8 +39,8 @@ class DisplayInfoCollector : BaseCollector() {
   override fun hasRequiredPermissions(context: Context): Boolean = true
 
   private fun resolveDisplay(
-          context: Context,
-          displayManager: DisplayManager?,
+    context: Context,
+    displayManager: DisplayManager?,
   ): Display? {
     val defaultDisplay = displayManager?.getDisplay(Display.DEFAULT_DISPLAY)
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -51,28 +51,26 @@ class DisplayInfoCollector : BaseCollector() {
   }
 
   @Suppress("SwallowedException")
-  private fun getCurrentWindowMetrics(windowManager: WindowManager?): WindowMetrics? =
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-              windowManager?.currentWindowMetrics
-            } catch (ignored: Exception) {
-              null
-            }
-          } else {
-            null
-          }
+  private fun getCurrentWindowMetrics(windowManager: WindowManager?): WindowMetrics? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    try {
+      windowManager?.currentWindowMetrics
+    } catch (ignored: Exception) {
+      null
+    }
+  } else {
+    null
+  }
 
   @Suppress("SwallowedException")
-  private fun getMaximumWindowMetrics(windowManager: WindowManager?): WindowMetrics? =
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-              windowManager?.maximumWindowMetrics
-            } catch (ignored: Exception) {
-              null
-            }
-          } else {
-            null
-          }
+  private fun getMaximumWindowMetrics(windowManager: WindowManager?): WindowMetrics? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    try {
+      windowManager?.maximumWindowMetrics
+    } catch (ignored: Exception) {
+      null
+    }
+  } else {
+    null
+  }
 
   private fun JSONObject.putResourceMetrics(metrics: DisplayMetrics) {
     put("widthPixels", metrics.widthPixels)
@@ -119,14 +117,15 @@ class DisplayInfoCollector : BaseCollector() {
       }
       put("locales", localesArray)
     } else {
-      @Suppress("DEPRECATION") val localeValue = configuration.locale.toString()
+      @Suppress("DEPRECATION")
+      val localeValue = configuration.locale.toString()
       put("locale", localeValue)
     }
   }
 
   private fun JSONObject.putRealMetrics(
-          maximumWindowMetrics: WindowMetrics?,
-          resourceMetrics: DisplayMetrics,
+    maximumWindowMetrics: WindowMetrics?,
+    resourceMetrics: DisplayMetrics,
   ) {
     if (maximumWindowMetrics == null) return
     val bounds = maximumWindowMetrics.bounds

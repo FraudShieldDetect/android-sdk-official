@@ -2,18 +2,18 @@ package com.protosdk.sdk.fingerprint
 
 import android.content.Context
 import com.protosdk.sdk.fingerprint.collectors.BuildInfoCollector
+import com.protosdk.sdk.fingerprint.collectors.CpuInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DebugInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DeviceInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.DisplayInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.EmulatorDetectionCollector
 import com.protosdk.sdk.fingerprint.collectors.GpuInfoCollector
-import com.protosdk.sdk.fingerprint.collectors.CpuInfoCollector
-import com.protosdk.sdk.fingerprint.collectors.StorageInfoCollector
-import com.protosdk.sdk.fingerprint.collectors.SensorInfoCollector
-import com.protosdk.sdk.fingerprint.collectors.NetworkInfoCollector
-import com.protosdk.sdk.fingerprint.collectors.RootDetectionCollector
 import com.protosdk.sdk.fingerprint.collectors.GsfIdCollector
 import com.protosdk.sdk.fingerprint.collectors.MediaDrmCollector
+import com.protosdk.sdk.fingerprint.collectors.NetworkInfoCollector
+import com.protosdk.sdk.fingerprint.collectors.RootDetectionCollector
+import com.protosdk.sdk.fingerprint.collectors.SensorInfoCollector
+import com.protosdk.sdk.fingerprint.collectors.StorageInfoCollector
 import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
 import kotlinx.coroutines.*
 import org.json.JSONArray
