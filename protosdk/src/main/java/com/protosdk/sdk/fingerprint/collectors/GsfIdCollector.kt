@@ -14,17 +14,19 @@ class GsfIdCollector : BaseCollector() {
     val contentResolver = context.contentResolver
     val uri = Uri.parse(GSF_CONTENT_URI)
 
-    var rawValue: String? = null
-    var gsfIdHex: String? = null
+    result.collectDataPoint("gsfId", fallback = "") {
+      var rawValue: String? = null
+      var gsfIdHex: String? = null
 
-    contentResolver?.query(uri, null, null, arrayOf(GSF_ID_KEY), null)?.use { cursor ->
-      if (cursor.moveToFirst() && cursor.columnCount >= 2) {
-        rawValue = cursor.getString(1)
-        gsfIdHex = rawValue?.toLongOrNull()?.let { java.lang.Long.toHexString(it) } ?: rawValue
+      contentResolver?.query(uri, null, null, arrayOf(GSF_ID_KEY), null)?.use { cursor ->
+        if (cursor.moveToFirst() && cursor.columnCount >= 2) {
+          rawValue = cursor.getString(1)
+          gsfIdHex = rawValue?.toLongOrNull()?.let { java.lang.Long.toHexString(it) } ?: rawValue
+        }
       }
-    }
 
-    result.put("gsfId", gsfIdHex ?: "")
+      gsfIdHex ?: ""
+    }
 
     result
   }

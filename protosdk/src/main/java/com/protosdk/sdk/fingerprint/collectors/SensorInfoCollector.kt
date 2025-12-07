@@ -24,9 +24,9 @@ class SensorInfoCollector : BaseCollector() {
     sensors.forEach { sensor ->
       val obj =
         JSONObject().apply {
-          put("name", sensor.name)
-          put("vendor", sensor.vendor)
-          put("type", sensor.type)
+          collectDataPoint("name") { sensor.name }
+          collectDataPoint("vendor") { sensor.vendor }
+          collectDataPoint("type") { sensor.type }
         }
       sensorArray.put(obj)
     }
@@ -49,11 +49,11 @@ class SensorInfoCollector : BaseCollector() {
     publishEmulatorSignals(sensors, missingCommon, vendorCounts)
 
     JSONObject().apply {
-      put("totalSensors", sensors.size)
-      put("aospGoldfishSensorCount", aospGoldfishCount)
-      put("vendorCounts", JSONObject(vendorCounts))
-      put("missingCommonSensors", JSONArray(missingCommon))
-      put("sensors", sensorArray)
+      collectDataPoint("totalSensors") { sensors.size }
+      collectDataPoint("aospGoldfishSensorCount") { aospGoldfishCount }
+      collectDataPoint("vendorCounts") { JSONObject(vendorCounts) }
+      collectDataPoint("missingCommonSensors") { JSONArray(missingCommon) }
+      collectDataPoint("sensors") { sensorArray }
     }
   }
 

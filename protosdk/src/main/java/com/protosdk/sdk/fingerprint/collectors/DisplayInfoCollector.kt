@@ -73,12 +73,12 @@ class DisplayInfoCollector : BaseCollector() {
   }
 
   private fun JSONObject.putResourceMetrics(metrics: DisplayMetrics) {
-    put("widthPixels", metrics.widthPixels)
-    put("heightPixels", metrics.heightPixels)
-    put("density", metrics.density)
-    put("densityDpi", metrics.densityDpi)
-    put("xdpi", metrics.xdpi)
-    put("ydpi", metrics.ydpi)
+    collectDataPoint("widthPixels") { metrics.widthPixels }
+    collectDataPoint("heightPixels") { metrics.heightPixels }
+    collectDataPoint("density") { metrics.density }
+    collectDataPoint("densityDpi") { metrics.densityDpi }
+    collectDataPoint("xdpi") { metrics.xdpi }
+    collectDataPoint("ydpi") { metrics.ydpi }
   }
 
   private fun JSONObject.putDisplayDetails(display: Display?) {
@@ -86,40 +86,40 @@ class DisplayInfoCollector : BaseCollector() {
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       display.hdrCapabilities?.let { capabilities ->
-        put("hdrMaxLuminance", capabilities.desiredMaxLuminance)
+        collectDataPoint("hdrMaxLuminance") { capabilities.desiredMaxLuminance }
       }
     }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      put("isHdr", display.isHdr)
-      put("isWideColorGamut", display.isWideColorGamut)
+      collectDataPoint("isHdr") { display.isHdr }
+      collectDataPoint("isWideColorGamut") { display.isWideColorGamut }
     }
 
     val supportedRefreshRates = JSONArray()
     display.supportedModes.map { it.refreshRate }.distinct().sorted().forEach { rate ->
       supportedRefreshRates.put(rate)
     }
-    put("supportedRefreshRates", supportedRefreshRates)
+    collectDataPoint("supportedRefreshRates") { supportedRefreshRates }
   }
 
   private fun JSONObject.putConfiguration(configuration: Configuration) {
-    put("screenLayoutSize", configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK)
-    put("uiModeNight", configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK)
-    put("screenWidthDp", configuration.screenWidthDp)
-    put("screenHeightDp", configuration.screenHeightDp)
-    put("smallestScreenWidthDp", configuration.smallestScreenWidthDp)
-    put("fontScale", configuration.fontScale)
+    collectDataPoint("screenLayoutSize") { configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK }
+    collectDataPoint("uiModeNight") { configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK }
+    collectDataPoint("screenWidthDp") { configuration.screenWidthDp }
+    collectDataPoint("screenHeightDp") { configuration.screenHeightDp }
+    collectDataPoint("smallestScreenWidthDp") { configuration.smallestScreenWidthDp }
+    collectDataPoint("fontScale") { configuration.fontScale }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
       val localesArray = JSONArray()
       for (i in 0 until configuration.locales.size()) {
         localesArray.put(configuration.locales.get(i).toString())
       }
-      put("locales", localesArray)
+      collectDataPoint("locales") { localesArray }
     } else {
       @Suppress("DEPRECATION")
       val localeValue = configuration.locale.toString()
-      put("locale", localeValue)
+      collectDataPoint("locale") { localeValue }
     }
   }
 
@@ -129,9 +129,9 @@ class DisplayInfoCollector : BaseCollector() {
   ) {
     if (maximumWindowMetrics == null) return
     val bounds = maximumWindowMetrics.bounds
-    put("realWidthPixels", bounds.width())
-    put("realHeightPixels", bounds.height())
-    put("realDensity", resourceMetrics.density)
-    put("realDensityDpi", resourceMetrics.densityDpi)
+    collectDataPoint("realWidthPixels") { bounds.width() }
+    collectDataPoint("realHeightPixels") { bounds.height() }
+    collectDataPoint("realDensity") { resourceMetrics.density }
+    collectDataPoint("realDensityDpi") { resourceMetrics.densityDpi }
   }
 }

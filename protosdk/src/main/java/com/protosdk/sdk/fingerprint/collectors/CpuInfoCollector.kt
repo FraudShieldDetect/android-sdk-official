@@ -7,18 +7,12 @@ import org.json.JSONObject
 
 class CpuInfoCollector : BaseCollector() {
   override suspend fun collect(context: Context): JSONObject = safeCollect {
-    val topology = JSONObject(CpuDetectionBridge.nativeGetCpuTopology())
-    val frequency = JSONObject(CpuDetectionBridge.nativeGetCpuFreqInfo())
-    // val idle = JSONObject(CpuDetectionBridge.nativeGetCpuIdleStates())
-    // val platform = JSONObject(CpuDetectionBridge.nativeGetPlatformId())
-    val procinfo = JSONObject(CpuDetectionBridge.nativeGetProcInfo())
-
     JSONObject().apply {
-      put("topology", topology)
-      put("frequency", frequency)
-      // put("idleStates", idle)
-      // put("platform", platform)
-      put("procinfo", procinfo)
+      collectDataPoint("topology") { JSONObject(CpuDetectionBridge.nativeGetCpuTopology()) }
+      collectDataPoint("frequency") { JSONObject(CpuDetectionBridge.nativeGetCpuFreqInfo()) }
+      // collectDataPoint("idleStates") { JSONObject(CpuDetectionBridge.nativeGetCpuIdleStates()) }
+      // collectDataPoint("platform") { JSONObject(CpuDetectionBridge.nativeGetPlatformId()) }
+      collectDataPoint("procinfo") { JSONObject(CpuDetectionBridge.nativeGetProcInfo()) }
     }
   }
 

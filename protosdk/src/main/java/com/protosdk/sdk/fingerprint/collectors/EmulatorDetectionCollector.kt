@@ -50,6 +50,7 @@ class EmulatorDetectionCollector(
     var suspicionScore = 0.0
     var highConfidenceSignals = 0
     var hardwareChecksPassed = 0
+    val operationErrors = mutableListOf<String>()
 
     fun recordIndicator(label: String, weight: Double, highConfidence: Boolean = false) {
       if (indicators.add(label)) {
@@ -241,7 +242,11 @@ class EmulatorDetectionCollector(
     }
 
     operations.shuffle(random)
-    operations.forEach { it.invoke() }
+    operations.forEach { operation ->
+      runCatching { operation.invoke() }.onFailure { throwable ->
+        operationErrors += throwable.message ?: throwable::class.java.simpleName
+      }
+    }
 
     gpuSignals?.let { signals ->
       if (signals.suspectedVirtualization) {
@@ -268,12 +273,15 @@ class EmulatorDetectionCollector(
     val isEmulator = highConfidenceSignals > 0 || confidenceScore >= 0.7
 
     return JSONObject().apply {
-      put("emulatorIndicators", JSONArray().apply { indicators.forEach { put(it) } })
-      put("isEmulator", isEmulator)
-      put("hardwareChecksPassed", hardwareChecksPassed)
-      put("confidenceScore", String.format(locale, "%.2f", confidenceScore).toDouble())
-      put("antiDebugTriggered", antiDebugTriggered)
-      put("highConfidenceSignals", highConfidenceSignals)
+      collectDataPoint("emulatorIndicators") { JSONArray().apply { indicators.forEach { put(it) } } }
+      collectDataPoint("isEmulator") { isEmulator }
+      collectDataPoint("hardwareChecksPassed") { hardwareChecksPassed }
+      collectDataPoint("confidenceScore") { String.format(locale, "%.2f", confidenceScore).toDouble() }
+      collectDataPoint("antiDebugTriggered") { antiDebugTriggered }
+      collectDataPoint("highConfidenceSignals") { highConfidenceSignals }
+      if (operationErrors.isNotEmpty()) {
+        collectDataPoint("collectionWarnings") { JSONArray(operationErrors) }
+      }
     }
   }
 

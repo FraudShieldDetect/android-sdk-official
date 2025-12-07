@@ -46,6 +46,7 @@ class RootDetectionCollector(
     val indicators = linkedSetOf<String>()
     var nativeChecks = 0
     var highConfidenceSignals = 0
+    val operationErrors = mutableListOf<String>()
 
     fun recordIndicator(indicator: String, isHighConfidence: Boolean) {
       val added = indicators.add(indicator)
@@ -114,19 +115,26 @@ class RootDetectionCollector(
     }
 
     operations.shuffle(random)
-    operations.forEach { it.invoke() }
+    operations.forEach { operation ->
+      runCatching { operation.invoke() }.onFailure { throwable ->
+        operationErrors += throwable.message ?: throwable::class.java.simpleName
+      }
+    }
 
     val tracerPid = bridge.nativeTracerPid().also { nativeChecks += 1 }
     val antiDebugTriggered = Debug.isDebuggerConnected() || tracerPid > 0
     val isRooted = highConfidenceSignals > 0 || indicators.size >= MIN_INDICATORS_FOR_ROOT
 
     return JSONObject().apply {
-      put("rootIndicators", JSONArray().apply { indicators.forEach { put(it) } })
-      put("integrityVerified", integrityVerified)
-      put("isRooted", isRooted)
-      put("nativeChecksPerformed", nativeChecks)
-      put("antiDebugTriggered", antiDebugTriggered)
-      put("highConfidenceSignals", highConfidenceSignals)
+      collectDataPoint("rootIndicators") { JSONArray().apply { indicators.forEach { put(it) } } }
+      collectDataPoint("integrityVerified") { integrityVerified }
+      collectDataPoint("isRooted") { isRooted }
+      collectDataPoint("nativeChecksPerformed") { nativeChecks }
+      collectDataPoint("antiDebugTriggered") { antiDebugTriggered }
+      collectDataPoint("highConfidenceSignals") { highConfidenceSignals }
+      if (operationErrors.isNotEmpty()) {
+        collectDataPoint("collectionWarnings") { JSONArray(operationErrors) }
+      }
     }
   }
 

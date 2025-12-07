@@ -13,26 +13,29 @@ class StorageInfoCollector : BaseCollector() {
 
     val directory: File? = context.filesDir ?: context.cacheDir
     if (directory != null) {
-      val statFs = StatFs(directory.absolutePath)
-      val blockSize = statFs.blockSizeLong
-      val totalBytes = statFs.blockCountLong * blockSize
-
-      result.apply { put("storageTotalBytes", totalBytes) }
+      result.collectDataPoint("storageTotalBytes") {
+        val statFs = StatFs(directory.absolutePath)
+        val blockSize = statFs.blockSizeLong
+        statFs.blockCountLong * blockSize
+      }
     } else {
-      result.put("storageError", "directoryUnavailable")
+      result.collectDataPoint("storageError") { "directoryUnavailable" }
     }
 
     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
     if (activityManager != null) {
-      val memInfo = ActivityManager.MemoryInfo()
-      activityManager.getMemoryInfo(memInfo)
-
-      result.apply {
-        put("ramTotalBytes", memInfo.totalMem)
-        put("ramThresholdBytes", memInfo.threshold)
+      result.collectDataPoint("ramTotalBytes") {
+        val memInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memInfo)
+        memInfo.totalMem
+      }
+      result.collectDataPoint("ramThresholdBytes") {
+        val memInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memInfo)
+        memInfo.threshold
       }
     } else {
-      result.put("ramError", "activityManagerUnavailable")
+      result.collectDataPoint("ramError") { "activityManagerUnavailable" }
     }
 
     result

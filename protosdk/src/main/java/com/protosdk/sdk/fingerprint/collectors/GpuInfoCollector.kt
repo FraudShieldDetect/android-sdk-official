@@ -172,20 +172,20 @@ class GpuInfoCollector : BaseCollector() {
 
     val payload =
       JSONObject().apply {
-        put("renderer", snapshot.renderer)
-        put("vendor", snapshot.vendor)
-        put("version", snapshot.version)
-        put("eglVendor", snapshot.eglVendor)
-        put("extensions", extensionJson)
-        put("maxTextureSize", snapshot.maxTextureSize)
-        put("computeSupported", snapshot.computeInvocations > 0)
-        put("computeWorkGroupInvocations", snapshot.computeInvocations)
-        put("systemRamMb", systemRamMb)
-        put("vulkanSupported", snapshot.vulkanSupported)
-        put("hardwareChecksPassed", hardwareChecksPassed)
-        put("suspiciousIndicators", JSONArray().apply { indicatorSet.forEach { put(it) } })
-        put("confidenceScore", confidenceScore)
-        put("suspectedVirtualization", suspectedVirtualization)
+        collectDataPoint("renderer") { snapshot.renderer }
+        collectDataPoint("vendor") { snapshot.vendor }
+        collectDataPoint("version") { snapshot.version }
+        collectDataPoint("eglVendor") { snapshot.eglVendor }
+        collectDataPoint("extensions") { extensionJson }
+        collectDataPoint("maxTextureSize") { snapshot.maxTextureSize }
+        collectDataPoint("computeSupported") { snapshot.computeInvocations > 0 }
+        collectDataPoint("computeWorkGroupInvocations") { snapshot.computeInvocations }
+        collectDataPoint("systemRamMb") { systemRamMb }
+        collectDataPoint("vulkanSupported") { snapshot.vulkanSupported }
+        collectDataPoint("hardwareChecksPassed") { hardwareChecksPassed }
+        collectDataPoint("suspiciousIndicators") { JSONArray().apply { indicatorSet.forEach { put(it) } } }
+        collectDataPoint("confidenceScore") { confidenceScore }
+        collectDataPoint("suspectedVirtualization") { suspectedVirtualization }
       }
     GpuSignalBus.updateFromJson(payload)
     return payload

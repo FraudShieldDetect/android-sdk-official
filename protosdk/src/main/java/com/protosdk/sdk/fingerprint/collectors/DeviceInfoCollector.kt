@@ -11,41 +11,38 @@ class DeviceInfoCollector : BaseCollector() {
       val resolver = context.contentResolver
 
       val androidId = Settings.Secure.getString(resolver, Settings.Secure.ANDROID_ID)
-      put("androidId", androidId ?: "unknown")
+      collectDataPoint("androidId", fallback = "unknown") { androidId }
 
-      put(
-        "developmentSettingsEnabled",
-        safeGetInt(resolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0),
-      )
+      collectDataPoint("developmentSettingsEnabled") {
+        safeGetInt(resolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0)
+      }
 
-      put("bootCount", safeGetInt(resolver, Settings.Global.BOOT_COUNT, 0))
+      collectDataPoint("bootCount") { safeGetInt(resolver, Settings.Global.BOOT_COUNT, 0) }
 
-      put("deviceProvisioned", safeGetInt(resolver, Settings.Global.DEVICE_PROVISIONED, 0))
+      collectDataPoint("deviceProvisioned") { safeGetInt(resolver, Settings.Global.DEVICE_PROVISIONED, 0) }
 
-      put("stayOnWhilePluggedIn", safeGetInt(resolver, Settings.Global.STAY_ON_WHILE_PLUGGED_IN, 0))
+      collectDataPoint("stayOnWhilePluggedIn") {
+        safeGetInt(resolver, Settings.Global.STAY_ON_WHILE_PLUGGED_IN, 0)
+      }
 
-      put(
-        "transitionAnimationScale",
-        safeGetString(resolver, Settings.Global.TRANSITION_ANIMATION_SCALE, "1.0"),
-      )
-      put(
-        "windowAnimationScale",
-        safeGetString(resolver, Settings.Global.WINDOW_ANIMATION_SCALE, "1.0"),
-      )
-      put("autoTime", safeGetInt(resolver, Settings.Global.AUTO_TIME, 0))
-      put("autoTimeZone", safeGetInt(resolver, Settings.Global.AUTO_TIME_ZONE, 0))
-      put("bluetoothDiscoverability", safeGetString(resolver, "bluetooth_discoverability"))
-      put(
-        "bluetoothDiscoverabilityTimeout",
-        safeGetString(resolver, "bluetooth_discoverability_timeout"),
-      )
-      put("httpProxy", safeGetString(resolver, Settings.Global.HTTP_PROXY))
-      put("networkPreference", safeGetString(resolver, Settings.Global.NETWORK_PREFERENCE))
-      put(
-        "wifiNetworksAvailableNotificationOn",
-        safeGetString(resolver, Settings.Global.WIFI_NETWORKS_AVAILABLE_NOTIFICATION_ON),
-      )
-      put("airplaneModeRadios", safeGetString(resolver, Settings.Global.AIRPLANE_MODE_RADIOS))
+      collectDataPoint("transitionAnimationScale") {
+        safeGetString(resolver, Settings.Global.TRANSITION_ANIMATION_SCALE, "1.0")
+      }
+      collectDataPoint("windowAnimationScale") {
+        safeGetString(resolver, Settings.Global.WINDOW_ANIMATION_SCALE, "1.0")
+      }
+      collectDataPoint("autoTime") { safeGetInt(resolver, Settings.Global.AUTO_TIME, 0) }
+      collectDataPoint("autoTimeZone") { safeGetInt(resolver, Settings.Global.AUTO_TIME_ZONE, 0) }
+      collectDataPoint("bluetoothDiscoverability") { safeGetString(resolver, "bluetooth_discoverability") }
+      collectDataPoint("bluetoothDiscoverabilityTimeout") {
+        safeGetString(resolver, "bluetooth_discoverability_timeout")
+      }
+      collectDataPoint("httpProxy") { safeGetString(resolver, Settings.Global.HTTP_PROXY) }
+      collectDataPoint("networkPreference") { safeGetString(resolver, Settings.Global.NETWORK_PREFERENCE) }
+      collectDataPoint("wifiNetworksAvailableNotificationOn") {
+        safeGetString(resolver, Settings.Global.WIFI_NETWORKS_AVAILABLE_NOTIFICATION_ON)
+      }
+      collectDataPoint("airplaneModeRadios") { safeGetString(resolver, Settings.Global.AIRPLANE_MODE_RADIOS) }
     }
   }
 
