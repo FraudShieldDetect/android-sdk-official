@@ -19,23 +19,22 @@ class NetworkInfoCollector : BaseCollector() {
     val link = active?.let { cm.getLinkProperties(it) }
 
     JSONObject().apply {
-      put(
-        "isCaptivePortal",
-        caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL) == true,
-      )
-      put("isRoaming", caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING) == false)
-      put("isVpn", caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true || link.isTun())
+      collectDataPoint("isCaptivePortal") {
+        caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL) == true
+      }
+      collectDataPoint("isRoaming") { caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING) == false }
+      collectDataPoint("isVpn") { caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true || link.isTun() }
 
-      put("transports", JSONArray().apply { caps?.let { addTransports(it, this) } })
+      collectDataPoint("transports") { JSONArray().apply { caps?.let { addTransports(it, this) } } }
 
-      put("interfaceName", link?.interfaceName ?: JSONObject.NULL)
+      collectDataPoint("interfaceName") { link?.interfaceName ?: JSONObject.NULL }
       val dnsList: List<String> = link?.dnsServers
         ?.mapNotNull { it.hostAddress }
         ?.filter { it.isNotBlank() }
         ?: emptyList()
-      put("dnsServers", JSONArray(dnsList))
-      put("privateDnsActive", link?.isPrivateDnsActive ?: JSONObject.NULL)
-      put("privateDnsServerName", link?.privateDnsServerName ?: JSONObject.NULL)
+      collectDataPoint("dnsServers") { JSONArray(dnsList) }
+      collectDataPoint("privateDnsActive") { link?.isPrivateDnsActive ?: JSONObject.NULL }
+      collectDataPoint("privateDnsServerName") { link?.privateDnsServerName ?: JSONObject.NULL }
     }
   }
 

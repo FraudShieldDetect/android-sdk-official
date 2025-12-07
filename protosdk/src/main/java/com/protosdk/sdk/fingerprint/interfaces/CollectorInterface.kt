@@ -1,6 +1,7 @@
 package com.protosdk.sdk.fingerprint.interfaces
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
 interface FingerprintCollector {
@@ -30,6 +31,42 @@ abstract class BaseCollector : FingerprintCollector {
     }
   }
 
+  protected fun JSONObject.collectDataPoint(
+    key: String,
+    fallback: Any? = DEFAULT_DATA_POINT_FALLBACK,
+    resolver: () -> Any?,
+  ) {
+    try {
+      val value = resolver() ?: fallback
+      put(key, value ?: JSONObject.NULL)
+    } catch (e: SecurityException) {
+      put(key, fallback ?: DEFAULT_DATA_POINT_FALLBACK)
+      if (LOG_DATA_POINT_ERRORS) {
+        recordDataPointError(key, e.message, true)
+      }
+    } catch (e: Exception) {
+      put(key, fallback ?: DEFAULT_DATA_POINT_FALLBACK)
+      if (LOG_DATA_POINT_ERRORS) {
+        recordDataPointError(key, e.message, false)
+      }
+    }
+  }
+
+  private fun JSONObject.recordDataPointError(
+    key: String,
+    message: String?,
+    permissionRequired: Boolean,
+  ) {
+    val errors = optJSONArray(DATA_POINT_ERRORS) ?: JSONArray().also { put(DATA_POINT_ERRORS, it) }
+    errors.put(
+      JSONObject().apply {
+        put("key", key)
+        put("error", message ?: "unknown_error")
+        put("permissionRequired", permissionRequired)
+      },
+    )
+  }
+
   protected fun hasPermission(
     context: Context,
     permission: String,
@@ -41,4 +78,10 @@ abstract class BaseCollector : FingerprintCollector {
   }
 
   override fun isSupported(context: Context): Boolean = true
+
+  private companion object {
+    const val DATA_POINT_ERRORS = "dataPointErrors"
+    const val DEFAULT_DATA_POINT_FALLBACK = "error"
+    const val LOG_DATA_POINT_ERRORS = false
+  }
 }
