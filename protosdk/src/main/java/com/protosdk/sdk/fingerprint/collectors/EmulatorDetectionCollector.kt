@@ -32,7 +32,7 @@ class EmulatorDetectionCollector(
 
   override suspend fun collect(context: Context): JSONObject = withContext(Dispatchers.IO) {
     try {
-      withTimeout(150L) { safeCollect { performDetection(context) } }
+      withTimeout(300L) { safeCollect { performDetection(context) } }
     } catch (timeout: TimeoutCancellationException) {
       JSONObject().apply {
         put("emulatorIndicators", JSONArray())
@@ -69,8 +69,9 @@ class EmulatorDetectionCollector(
       EmulatorStringDecoder.properties().associateWith { key ->
         bridge.nativeGetProperty(key)
       }
+    val gpuSignals = awaitSignal(220L) { GpuSignalBus.latest() }
+    val sensorSignals = awaitSignal(140L) { SensorSignalBus.latest() }
     val deviceTokens = EmulatorStringDecoder.devices().map { it.lowercase(locale) }
-    val gpuSignals = GpuSignalBus.latest()
 
     val operations = mutableListOf<() -> Unit>()
 
@@ -188,7 +189,6 @@ class EmulatorDetectionCollector(
     }
 
     operations += {
-      val sensorSignals = SensorSignalBus.latest()
       if (sensorSignals != null) {
         sensorSignals.indicators.take(10).forEach { label ->
           recordIndicator("sensorbus:$label", WEIGHT_LOW)
@@ -283,6 +283,22 @@ class EmulatorDetectionCollector(
         collectDataPoint("collectionWarnings") { JSONArray(operationErrors) }
       }
     }
+  }
+
+  private fun <T> awaitSignal(
+    maxWaitMs: Long,
+    pollIntervalMs: Long = 10L,
+    fetch: () -> T?,
+  ): T? {
+    var result = fetch()
+    if (result != null) return result
+
+    val deadline = SystemClock.elapsedRealtime() + maxWaitMs
+    while (result == null && SystemClock.elapsedRealtime() < deadline) {
+      SystemClock.sleep(pollIntervalMs)
+      result = fetch()
+    }
+    return result
   }
 
   private fun evaluateBattery(context: Context): Pair<Boolean, String?> {
