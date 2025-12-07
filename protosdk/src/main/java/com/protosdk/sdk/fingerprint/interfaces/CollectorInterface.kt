@@ -17,19 +17,7 @@ interface FingerprintCollector {
 }
 
 abstract class BaseCollector : FingerprintCollector {
-  protected fun safeCollect(block: () -> JSONObject): JSONObject = try {
-    block()
-  } catch (e: SecurityException) {
-    JSONObject().apply {
-      put("error", "Permission denied: ${e.message}")
-      put("permissionRequired", true)
-    }
-  } catch (e: Exception) {
-    JSONObject().apply {
-      put("error", "Collection failed: ${e.message}")
-      put("permissionRequired", false)
-    }
-  }
+  protected fun safeCollect(block: () -> JSONObject): JSONObject = block()
 
   protected fun JSONObject.collectDataPoint(
     key: String,
