@@ -281,8 +281,8 @@ private constructor(
     scope.cancel()
   }
 
-  /** Generates fingerprint string from data (excluding timestamp for consistency) */
-  private fun generateFingerprintString(data: FingerprintData): String = data.toJson().toString()
+  /** Generates fingerprint string from stable subset (excluding volatile runtime fields) */
+  private fun generateFingerprintString(data: FingerprintData): String = data.toStableJson().toString()
 
   /** Generates fingerprint hash */
   private fun generateFingerprintHash(data: String): String = try {

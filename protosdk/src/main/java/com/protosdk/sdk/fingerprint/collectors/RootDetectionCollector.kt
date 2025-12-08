@@ -125,15 +125,18 @@ class RootDetectionCollector(
     val antiDebugTriggered = Debug.isDebuggerConnected() || tracerPid > 0
     val isRooted = highConfidenceSignals > 0 || indicators.size >= MIN_INDICATORS_FOR_ROOT
 
+    val orderedIndicators = indicators.toList().sorted()
+    val orderedWarnings = operationErrors.sorted()
+
     return JSONObject().apply {
-      collectDataPoint("rootIndicators") { JSONArray().apply { indicators.forEach { put(it) } } }
+      collectDataPoint("rootIndicators") { JSONArray().apply { orderedIndicators.forEach { put(it) } } }
       collectDataPoint("integrityVerified") { integrityVerified }
       collectDataPoint("isRooted") { isRooted }
       collectDataPoint("nativeChecksPerformed") { nativeChecks }
       collectDataPoint("antiDebugTriggered") { antiDebugTriggered }
       collectDataPoint("highConfidenceSignals") { highConfidenceSignals }
-      if (operationErrors.isNotEmpty()) {
-        collectDataPoint("collectionWarnings") { JSONArray(operationErrors) }
+      if (orderedWarnings.isNotEmpty()) {
+        collectDataPoint("collectionWarnings") { JSONArray(orderedWarnings) }
       }
     }
   }

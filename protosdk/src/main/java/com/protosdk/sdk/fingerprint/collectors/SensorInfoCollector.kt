@@ -18,7 +18,10 @@ class SensorInfoCollector : BaseCollector() {
           put("error", "sensorManagerUnavailable")
         }
 
-    val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
+    val sensors =
+      sensorManager
+        .getSensorList(Sensor.TYPE_ALL)
+        .sortedWith(compareBy({ it.vendor.lowercase() }, { it.name.lowercase() }, { it.type }))
 
     val sensorArray = JSONArray()
     sensors.forEach { sensor ->
