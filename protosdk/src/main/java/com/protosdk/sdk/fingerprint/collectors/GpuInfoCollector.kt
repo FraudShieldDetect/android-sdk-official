@@ -62,7 +62,12 @@ class GpuInfoCollector : BaseCollector() {
 
   private fun buildPayload(context: Context): JSONObject {
     val snapshot = collectSnapshot()
-    val extensions = snapshot.extensions.distinct()
+    val extensions =
+      snapshot.extensions
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .sorted()
     val virtualizationIndicators = mutableListOf<String>()
 
     val rendererMatch =
@@ -135,7 +140,7 @@ class GpuInfoCollector : BaseCollector() {
       virtualizationIndicators += "vendor_mismatch_google"
     }
 
-    val indicatorSet = virtualizationIndicators.filter { it.isNotBlank() }.toSet()
+    val indicatorSet = virtualizationIndicators.filter { it.isNotBlank() }.toSortedSet()
     val highConfidence =
       indicatorSet.count { indicator ->
         indicator.startsWith("renderer_pattern") ||
@@ -183,7 +188,7 @@ class GpuInfoCollector : BaseCollector() {
         collectDataPoint("systemRamMb") { systemRamMb }
         collectDataPoint("vulkanSupported") { snapshot.vulkanSupported }
         collectDataPoint("hardwareChecksPassed") { hardwareChecksPassed }
-        collectDataPoint("suspiciousIndicators") { JSONArray().apply { indicatorSet.forEach { put(it) } } }
+        collectDataPoint("suspiciousIndicators") { JSONArray().apply { indicatorSet.toSortedSet().forEach { put(it) } } }
         collectDataPoint("confidenceScore") { confidenceScore }
         collectDataPoint("suspectedVirtualization") { suspectedVirtualization }
       }

@@ -272,15 +272,18 @@ class EmulatorDetectionCollector(
     val confidenceScore = min(1.0, suspicionScore)
     val isEmulator = highConfidenceSignals > 0 || confidenceScore >= 0.7
 
+    val orderedIndicators = indicators.toList().sorted()
+    val orderedWarnings = operationErrors.sorted()
+
     return JSONObject().apply {
-      collectDataPoint("emulatorIndicators") { JSONArray().apply { indicators.forEach { put(it) } } }
+      collectDataPoint("emulatorIndicators") { JSONArray().apply { orderedIndicators.forEach { put(it) } } }
       collectDataPoint("isEmulator") { isEmulator }
       collectDataPoint("hardwareChecksPassed") { hardwareChecksPassed }
       collectDataPoint("confidenceScore") { String.format(locale, "%.2f", confidenceScore).toDouble() }
       collectDataPoint("antiDebugTriggered") { antiDebugTriggered }
       collectDataPoint("highConfidenceSignals") { highConfidenceSignals }
-      if (operationErrors.isNotEmpty()) {
-        collectDataPoint("collectionWarnings") { JSONArray(operationErrors) }
+      if (orderedWarnings.isNotEmpty()) {
+        collectDataPoint("collectionWarnings") { JSONArray(orderedWarnings) }
       }
     }
   }
