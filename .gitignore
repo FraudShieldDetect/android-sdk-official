@@ -109,3 +109,7 @@ Thumbs.db
 
 # Readme
 README.md
+
+# Release artifacts
+*.aar
+*.aar.sha256
