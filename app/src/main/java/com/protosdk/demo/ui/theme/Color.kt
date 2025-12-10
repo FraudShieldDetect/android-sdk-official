@@ -2,10 +2,13 @@ package com.protosdk.demo.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Main theme colors
+val TealBackground = Color(0xFF1A434E)
+val OffWhite = Color(0xFFF9FAFA)       // For section titles
+val CardBackground = Color(0xFFFFFFFF)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Content inside cards
+val ItemKeyColor = Color(0xFF171417)    // Bold keys
+val ItemValueColor = Color(0xFF171417)  // Normal values
+
+val PrimaryColor = OffWhite             // Section titles + header text
