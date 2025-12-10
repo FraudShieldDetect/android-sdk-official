@@ -3,8 +3,10 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
@@ -13,9 +15,9 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.io.File
 import java.security.MessageDigest
 import java.util.Locale
 import java.util.UUID
@@ -24,6 +26,7 @@ import kotlin.text.Charsets
 plugins {
   id("com.android.library")
   id("org.jetbrains.kotlin.android")
+  id("maven-publish")
 }
 
 abstract class ComputeDexHashTask : DefaultTask() {
@@ -44,9 +47,9 @@ abstract class ComputeDexHashTask : DefaultTask() {
   fun run() {
     val digest = MessageDigest.getInstance("SHA-256")
     val files =
-      sourceFiles.files
-        .filter { it.isFile }
-        .sortedBy { it.relativeToOrNull(project.projectDir)?.path ?: it.absolutePath }
+      sourceFiles.files.filter { it.isFile }.sortedBy {
+        it.relativeToOrNull(project.projectDir)?.path ?: it.absolutePath
+      }
     files.forEach { input ->
       input.inputStream().use { stream ->
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -67,7 +70,8 @@ abstract class ComputeDexHashTask : DefaultTask() {
 abstract class GenerateObfuscatedStringsTask : DefaultTask() {
   @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
 
-  @get:Input val xorKey: org.gradle.api.provider.Property<String> =
+  @get:Input
+  val xorKey: org.gradle.api.provider.Property<String> =
     project.objects.property(String::class.java)
 
   @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
@@ -76,17 +80,13 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
   fun run() {
     val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
     val entries =
-      inputFile
-        .get()
-        .asFile
-        .readLines()
-        .mapNotNull { line ->
-          val trimmed = line.trim()
-          if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
-          val parts = trimmed.split("|", limit = 2)
-          if (parts.size != 2) return@mapNotNull null
-          parts[0].uppercase(Locale.ROOT) to parts[1]
-        }
+      inputFile.get().asFile.readLines().mapNotNull { line ->
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+        val parts = trimmed.split("|", limit = 2)
+        if (parts.size != 2) return@mapNotNull null
+        parts[0].uppercase(Locale.ROOT) to parts[1]
+      }
 
     val builder = StringBuilder()
     builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
@@ -133,7 +133,8 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
 abstract class GenerateEmulatorStringsTask : DefaultTask() {
   @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
 
-  @get:Input val xorKey: org.gradle.api.provider.Property<String> =
+  @get:Input
+  val xorKey: org.gradle.api.provider.Property<String> =
     project.objects.property(String::class.java)
 
   @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
@@ -142,17 +143,13 @@ abstract class GenerateEmulatorStringsTask : DefaultTask() {
   fun run() {
     val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
     val entries =
-      inputFile
-        .get()
-        .asFile
-        .readLines()
-        .mapNotNull { line ->
-          val trimmed = line.trim()
-          if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
-          val parts = trimmed.split("|", limit = 2)
-          if (parts.size != 2) return@mapNotNull null
-          parts[0].uppercase(Locale.ROOT) to parts[1]
-        }
+      inputFile.get().asFile.readLines().mapNotNull { line ->
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+        val parts = trimmed.split("|", limit = 2)
+        if (parts.size != 2) return@mapNotNull null
+        parts[0].uppercase(Locale.ROOT) to parts[1]
+      }
 
     val builder = StringBuilder()
     builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
@@ -186,7 +183,8 @@ abstract class GenerateEmulatorStringsTask : DefaultTask() {
 abstract class GenerateGpuStringsTask : DefaultTask() {
   @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
 
-  @get:Input val xorKey: org.gradle.api.provider.Property<String> =
+  @get:Input
+  val xorKey: org.gradle.api.provider.Property<String> =
     project.objects.property(String::class.java)
 
   @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
@@ -195,23 +193,21 @@ abstract class GenerateGpuStringsTask : DefaultTask() {
   fun run() {
     val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
     val entries =
-      inputFile
-        .get()
-        .asFile
-        .readLines()
-        .mapNotNull { line ->
-          val trimmed = line.trim()
-          if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
-          val parts = trimmed.split("|", limit = 2)
-          if (parts.size != 2) return@mapNotNull null
-          parts[0].uppercase(Locale.ROOT) to parts[1]
-        }
+      inputFile.get().asFile.readLines().mapNotNull { line ->
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+        val parts = trimmed.split("|", limit = 2)
+        if (parts.size != 2) return@mapNotNull null
+        parts[0].uppercase(Locale.ROOT) to parts[1]
+      }
 
     val builder = StringBuilder()
     builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
     builder.appendLine()
     builder.appendLine("internal object GpuStringTable {")
-    builder.appendLine("  internal data class Entry(val type: String, val hash: String, val payload: IntArray)")
+    builder.appendLine(
+      "  internal data class Entry(val type: String, val hash: String, val payload: IntArray)",
+    )
     builder.appendLine("  internal fun entries(): List<Entry> = listOf(")
     entries.forEachIndexed { index, (type, value) ->
       val encoded = encode(value, keyBytes)
@@ -255,20 +251,12 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     consumerProguardFiles("consumer-rules.pro")
 
-    aarMetadata {
-      minCompileSdk = 35
-    }
+    aarMetadata { minCompileSdk = 35 }
 
-    externalNativeBuild {
-      cmake {
-        arguments += listOf("-DANDROID_STL=c++_shared")
-      }
-    }
+    externalNativeBuild { cmake { arguments += listOf("-DANDROID_STL=c++_shared") } }
   }
 
-  buildFeatures {
-    buildConfig = true
-  }
+  buildFeatures { buildConfig = true }
 
   buildTypes {
     release {
@@ -292,15 +280,9 @@ android {
     }
   }
 
-  lint {
-    baseline = file("lint-baseline.xml")
-  }
+  lint { baseline = file("lint-baseline.xml") }
 
-  externalNativeBuild {
-    cmake {
-      path = file("src/main/cpp/CMakeLists.txt")
-    }
-  }
+  externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
 }
 
 dependencies {
@@ -309,10 +291,27 @@ dependencies {
   implementation("com.google.code.gson:gson:2.11.0")
 }
 
-tasks.withType<KotlinCompile>().configureEach {
-  compilerOptions {
-    jvmTarget.set(JvmTarget.JVM_1_8)
+publishing {
+  publications {
+    create<MavenPublication>("release") {
+      groupId = "com.github.fraudshielddetect"
+      artifactId = "protosdk"
+      version = "1.0.0"
+      afterEvaluate { from(components["release"]) }
+    }
   }
+}
+
+tasks.withType<Jar>().configureEach { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
+
+afterEvaluate {
+  tasks.withType<Jar>().matching { it.name.contains("source", ignoreCase = true) }.configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  }
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+  compilerOptions { jvmTarget.set(JvmTarget.JVM_1_8) }
 }
 
 androidComponents {
@@ -409,7 +408,11 @@ androidComponents {
     )
     variant.buildConfigFields?.put(
       "EMULATOR_STRING_KEY",
-      BuildConfigField("String", "\"$emulatorKeyValue\"", "Variant-specific emulator XOR key"),
+      BuildConfigField(
+        "String",
+        "\"$emulatorKeyValue\"",
+        "Variant-specific emulator XOR key",
+      ),
     )
     variant.buildConfigFields?.put(
       "GPU_STRING_KEY",
@@ -429,9 +432,9 @@ fun Project.calculateSourceHash(): String {
       .map { projectDir.resolve(it) }
       .filter { it.exists() }
   val files =
-    roots
-      .flatMap { root -> root.walkTopDown().filter { it.isFile }.toList() }
-      .sortedBy { it.relativeTo(projectDir).path }
+    roots.flatMap { root -> root.walkTopDown().filter { it.isFile }.toList() }.sortedBy {
+      it.relativeTo(projectDir).path
+    }
   files.forEach { file ->
     file.inputStream().use { input ->
       val buffer = ByteArray(DEFAULT_BUFFER_SIZE)

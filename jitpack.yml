@@ -1,0 +1,10 @@
+jdk:
+  - openjdk17
+
+ndk: r25b
+
+install:
+  - echo "Building ProtoSDK"
+  - ./gradlew clean
+  - ./gradlew :protosdk:publishReleasePublicationToMavenLocal
+  - ./gradlew :protosdk:assembleRelease
