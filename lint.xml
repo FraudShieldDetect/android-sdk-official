@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Disable checks that are not relevant for this project -->
+    <issue id="MissingTranslation" severity="ignore" />
+    <issue id="HardcodedText" severity="ignore" />
+    
+    <!-- Enable strict checks for better code quality -->
+    <issue id="UnusedResources" severity="error" />
+    <issue id="UnusedIds" severity="error" />
+    <issue id="DuplicateIds" severity="error" />
+</lint>

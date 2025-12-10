@@ -1,0 +1,34 @@
+# type|value
+# Paths checked via native stat
+PATH|/system/bin/su
+PATH|/system/xbin/su
+PATH|/sbin/su
+PATH|/data/local/bin/su
+PATH|/data/local/xbin/su
+PATH|/sbin/.magisk
+PATH|/data/adb/magisk
+PATH|/data/adb/ksu/bin/ksud
+PATH|/system/app/Superuser.apk
+PATH|/system/app/Magisk.apk
+
+# System properties evaluated via nativeGetProperty
+PROPERTY|ro.debuggable
+PROPERTY|ro.secure
+PROPERTY|ro.boot.vbmeta.device_state
+PROPERTY|ro.boot.verifiedbootstate
+PROPERTY|ro.boot.flash.locked
+PROPERTY|ro.boot.veritymode
+PROPERTY|ro.boot.warranty_bit
+
+# Package names to probe
+PACKAGE|com.topjohnwu.magisk
+PACKAGE|eu.chainfire.supersu
+PACKAGE|com.koushikdutta.superuser
+PACKAGE|com.thirdparty.superuser
+PACKAGE|com.devadvance.rootcloak
+PACKAGE|org.lsposed.manager
+
+# Environment variables inspected for suspicious hooks
+ENV|PATH
+ENV|LD_PRELOAD
+ENV|LD_LIBRARY_PATH
