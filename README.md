@@ -1,6 +1,8 @@
-# ProtoSDK Android Integration Guide
+This SDK collects structured information about an Android device and generates a device fingerprint derived from system, hardware, and execution environment signals.
 
-This SDK collects device/build/display/debug/root/emulator/GPU/CPU/storage/network/sensor data and produces a deterministic SHA-256 fingerprint plus the raw JSON.
+The SDK focuses solely on device data collection and exposes the collected data in a structured format for use by the integrating application.
+
+
 
 ## Requirements
 - Android minSdk 24, compileSdk 35 (NDK 25.1.8937393 for native checks).
@@ -25,7 +27,7 @@ dependencies {
 }
 ```
 
-Alternative option:
+Alternative Option:
 - **Direct AAR**: download the release AAR and drop into `app/libs`, then `implementation(files("libs/protosdk-release.aar"))`.
 
 ## Initialize the SDK
@@ -49,7 +51,7 @@ class MyApp : Application() {
 }
 ```
 
-## Collect a fingerprint
+## Collect a Fingerprint
 ```kotlin
 // In a coroutine (e.g., viewModelScope / lifecycleScope)
 import com.protosdk.sdk.ProtoSDK
@@ -64,13 +66,17 @@ if (result.success) {
 }
 ```
 
-## Customize collectors
+## Customize Collectors
 - Add a custom collector: `sdk.addCollector("customName", YourCollector())`.
 - Remove a collector: `sdk.removeCollector("networkInfo")` (useful to drop volatile network state).
 - Collect a single collector: `sdk.collectCollectorData("gpuInfo")`.
 
-## Notes on stability
-- The fingerprint hash is computed from a stable subset (build/device identifiers, GPU/sensor inventory, storage totals, root/emulator indicators, etc.) and excludes volatile runtime state. The full JSON still contains everything for debugging and other uses.
+## Notes on Stability
+The generated device fingerprint is derived from a subset of collected device signals that are expected to remain relatively consistent across app launches.
 
-## Demo app
-See `app/src/main/java/com/protosdk/demo/MainActivity.kt` for a Compose example that initializes the SDK and displays the collected JSON and hash.
+Fingerprint values may change over time due to system updates, hardware changes, or environmental differences. The full set of collected device data is always available alongside the fingerprint for applications that require additional context.
+
+## Demo App
+This repository includes a demo application that shows how to initialize the SDK and collect device data and the generated device fingerprint.
+
+See `app/src/main/java/com/protosdk/demo/MainActivity.kt` for a simple example implementation.
