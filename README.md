@@ -238,9 +238,9 @@ Collectors run in parallel with per-collector timeouts.
 
 ## Privacy
 
-* No personal data collected
-* No permissions requested beyond standard Android access
-* All data remains on-device until explicitly exported
+* No personal user data is collected (such as names, emails, phone numbers, or account identifiers)
+* The SDK collects only device-level technical information
+* No runtime permissions are requested beyond standard Android access
 
 ---
 
