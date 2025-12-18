@@ -249,4 +249,5 @@ Collectors run in parallel with per-collector timeouts.
 This repository includes a demo application that shows how to initialize the SDK and collect device data and the generated device fingerprint.
 
 See app/src/main/java/com/protosdk/demo/MainActivity.kt for a simple example implementation.
+
 ---
