@@ -1,7 +1,6 @@
 package com.protosdk.sdk.fingerprint.internal
 
 import com.protosdk.sdk.BuildConfig
-import com.protosdk.sdk.fingerprint.nativebridge.EmulatorDetectionBridge
 
 internal object EmulatorStringDecoder {
   private const val TYPE_PATH = "PATH"
@@ -17,7 +16,7 @@ internal object EmulatorStringDecoder {
     return EmulatorStringTable.entries()
       .asSequence()
       .filter { it.type == type }
-      .map { EmulatorDetectionBridge.nativeDecodeString(it.payload, key) }
+      .mapNotNull { EmulatorStringTable.decode(it, key) }
       .filter { it.isNotBlank() }
       .toList()
   }

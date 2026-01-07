@@ -19,8 +19,13 @@ import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.Base64
 import java.util.Locale
 import java.util.UUID
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import kotlin.text.Charsets
 
 plugins {
@@ -71,14 +76,22 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
   @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
 
   @get:Input
-  val xorKey: org.gradle.api.provider.Property<String> =
+  val aesKey: org.gradle.api.provider.Property<String> =
     project.objects.property(String::class.java)
 
   @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
+  companion object {
+    private const val GCM_IV_LENGTH = 12
+    private const val GCM_TAG_LENGTH = 128
+  }
+
   @TaskAction
   fun run() {
-    val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
+    // Derive 16-byte AES key from variant key using SHA-256
+    val keyDigest = MessageDigest.getInstance("SHA-256")
+    val aesKeyBytes = keyDigest.digest(aesKey.get().toByteArray(Charsets.UTF_8)).copyOf(16)
+
     val entries =
       inputFile.get().asFile.readLines().mapNotNull { line ->
         val trimmed = line.trim()
@@ -91,27 +104,41 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
     val builder = StringBuilder()
     builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
     builder.appendLine()
+    builder.appendLine("import javax.crypto.Cipher")
+    builder.appendLine("import javax.crypto.spec.GCMParameterSpec")
+    builder.appendLine("import javax.crypto.spec.SecretKeySpec")
+    builder.appendLine("import java.security.MessageDigest")
+    builder.appendLine("import java.util.Base64")
+    builder.appendLine()
     builder.appendLine("internal object RootStringTable {")
-    builder.appendLine("  private data class Entry(val type: String, val payload: IntArray)")
+    builder.appendLine("  private data class Entry(val type: String, val payload: String)")
     builder.appendLine("  private val entries = listOf(")
     entries.forEachIndexed { index, (type, value) ->
-      val encoded = encode(value, keyBytes)
-      builder.append("    Entry(\"$type\", intArrayOf($encoded))")
+      val encoded = encryptAes(value, aesKeyBytes)
+      builder.append("    Entry(\"$type\", \"$encoded\")")
       if (index < entries.lastIndex) builder.appendLine(",") else builder.appendLine()
     }
     builder.appendLine("  )")
     builder.appendLine()
     builder.appendLine("  fun decode(type: String, key: String): List<String> {")
     builder.appendLine("    if (key.isEmpty()) return emptyList()")
-    builder.appendLine("    val keyBytes = key.encodeToByteArray()")
-    builder.appendLine("    return entries.filter { it.type == type }.map { entry ->")
-    builder.appendLine("      val decoded = ByteArray(entry.payload.size)")
-    builder.appendLine("      entry.payload.forEachIndexed { index, value ->")
-    builder.appendLine("        val xorByte = keyBytes[index % keyBytes.size].toInt() and 0xFF")
-    builder.appendLine("        decoded[index] = (value xor xorByte).toByte()")
+    builder.appendLine("    return try {")
+    builder.appendLine("      // Derive AES key from variant key")
+    builder.appendLine("      val keyDigest = MessageDigest.getInstance(\"SHA-256\")")
+    builder.appendLine("      val aesKey = keyDigest.digest(key.toByteArray(Charsets.UTF_8)).copyOf(16)")
+    builder.appendLine("      val secretKey = SecretKeySpec(aesKey, \"AES\")")
+    builder.appendLine("      entries.filter { it.type == type }.mapNotNull { entry ->")
+    builder.appendLine("        try {")
+    builder.appendLine("          val data = Base64.getDecoder().decode(entry.payload)")
+    builder.appendLine("          if (data.size < 12) return@mapNotNull null")
+    builder.appendLine("          val iv = data.copyOfRange(0, 12)")
+    builder.appendLine("          val ciphertext = data.copyOfRange(12, data.size)")
+    builder.appendLine("          val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")")
+    builder.appendLine("          cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(128, iv))")
+    builder.appendLine("          String(cipher.doFinal(ciphertext), Charsets.UTF_8)")
+    builder.appendLine("        } catch (e: Exception) { null }")
     builder.appendLine("      }")
-    builder.appendLine("      decoded.toString(Charsets.UTF_8)")
-    builder.appendLine("    }")
+    builder.appendLine("    } catch (e: Exception) { emptyList() }")
     builder.appendLine("  }")
     builder.appendLine("}")
 
@@ -120,13 +147,16 @@ abstract class GenerateObfuscatedStringsTask : DefaultTask() {
     outputFile.writeText(builder.toString())
   }
 
-  private fun encode(value: String, key: ByteArray): String {
-    val source = value.toByteArray(Charsets.UTF_8)
-    return source
-      .mapIndexed { index, byte ->
-        (byte.toInt() xor (key[index % key.size].toInt())) and 0xFF
-      }
-      .joinToString(", ")
+  private fun encryptAes(value: String, keyBytes: ByteArray): String {
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    val secretKey = SecretKeySpec(keyBytes, "AES")
+    val iv = ByteArray(GCM_IV_LENGTH)
+    SecureRandom().nextBytes(iv)
+    cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_LENGTH, iv))
+    val ciphertext = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+    // Prepend IV to ciphertext
+    val combined = iv + ciphertext
+    return Base64.getEncoder().encodeToString(combined)
   }
 }
 
@@ -134,14 +164,22 @@ abstract class GenerateEmulatorStringsTask : DefaultTask() {
   @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
 
   @get:Input
-  val xorKey: org.gradle.api.provider.Property<String> =
+  val aesKey: org.gradle.api.provider.Property<String> =
     project.objects.property(String::class.java)
 
   @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
+  companion object {
+    private const val GCM_IV_LENGTH = 12
+    private const val GCM_TAG_LENGTH = 128
+  }
+
   @TaskAction
   fun run() {
-    val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
+    // Derive 16-byte AES key from variant key using SHA-256
+    val keyDigest = MessageDigest.getInstance("SHA-256")
+    val aesKeyBytes = keyDigest.digest(aesKey.get().toByteArray(Charsets.UTF_8)).copyOf(16)
+
     val entries =
       inputFile.get().asFile.readLines().mapNotNull { line ->
         val trimmed = line.trim()
@@ -154,15 +192,36 @@ abstract class GenerateEmulatorStringsTask : DefaultTask() {
     val builder = StringBuilder()
     builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
     builder.appendLine()
+    builder.appendLine("import javax.crypto.Cipher")
+    builder.appendLine("import javax.crypto.spec.GCMParameterSpec")
+    builder.appendLine("import javax.crypto.spec.SecretKeySpec")
+    builder.appendLine("import java.security.MessageDigest")
+    builder.appendLine("import java.util.Base64")
+    builder.appendLine()
     builder.appendLine("internal object EmulatorStringTable {")
-    builder.appendLine("  internal data class Entry(val type: String, val payload: IntArray)")
+    builder.appendLine("  internal data class Entry(val type: String, val payload: String)")
     builder.appendLine("  internal fun entries(): List<Entry> = listOf(")
     entries.forEachIndexed { index, (type, value) ->
-      val encoded = encode(value, keyBytes)
-      builder.append("    Entry(\"$type\", intArrayOf($encoded))")
+      val encoded = encryptAes(value, aesKeyBytes)
+      builder.append("    Entry(\"$type\", \"$encoded\")")
       if (index < entries.lastIndex) builder.appendLine(",") else builder.appendLine()
     }
     builder.appendLine("  )")
+    builder.appendLine()
+    builder.appendLine("  internal fun decode(entry: Entry, key: String): String? {")
+    builder.appendLine("    return try {")
+    builder.appendLine("      val keyDigest = MessageDigest.getInstance(\"SHA-256\")")
+    builder.appendLine("      val aesKey = keyDigest.digest(key.toByteArray(Charsets.UTF_8)).copyOf(16)")
+    builder.appendLine("      val secretKey = SecretKeySpec(aesKey, \"AES\")")
+    builder.appendLine("      val data = Base64.getDecoder().decode(entry.payload)")
+    builder.appendLine("      if (data.size < 12) return null")
+    builder.appendLine("      val iv = data.copyOfRange(0, 12)")
+    builder.appendLine("      val ciphertext = data.copyOfRange(12, data.size)")
+    builder.appendLine("      val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")")
+    builder.appendLine("      cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(128, iv))")
+    builder.appendLine("      String(cipher.doFinal(ciphertext), Charsets.UTF_8)")
+    builder.appendLine("    } catch (e: Exception) { null }")
+    builder.appendLine("  }")
     builder.appendLine("}")
 
     val outputFile = outputDir.get().file("EmulatorStringTable.kt").asFile
@@ -170,13 +229,15 @@ abstract class GenerateEmulatorStringsTask : DefaultTask() {
     outputFile.writeText(builder.toString())
   }
 
-  private fun encode(value: String, key: ByteArray): String {
-    val source = value.toByteArray(Charsets.UTF_8)
-    return source
-      .mapIndexed { index, byte ->
-        (byte.toInt() xor (key[index % key.size].toInt())) and 0xFF
-      }
-      .joinToString(", ")
+  private fun encryptAes(value: String, keyBytes: ByteArray): String {
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    val secretKey = SecretKeySpec(keyBytes, "AES")
+    val iv = ByteArray(GCM_IV_LENGTH)
+    SecureRandom().nextBytes(iv)
+    cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_LENGTH, iv))
+    val ciphertext = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+    val combined = iv + ciphertext
+    return Base64.getEncoder().encodeToString(combined)
   }
 }
 
@@ -184,14 +245,22 @@ abstract class GenerateGpuStringsTask : DefaultTask() {
   @get:InputFile val inputFile: RegularFileProperty = project.objects.fileProperty()
 
   @get:Input
-  val xorKey: org.gradle.api.provider.Property<String> =
+  val aesKey: org.gradle.api.provider.Property<String> =
     project.objects.property(String::class.java)
 
   @get:OutputDirectory val outputDir: DirectoryProperty = project.objects.directoryProperty()
 
+  companion object {
+    private const val GCM_IV_LENGTH = 12
+    private const val GCM_TAG_LENGTH = 128
+  }
+
   @TaskAction
   fun run() {
-    val keyBytes = xorKey.get().toByteArray(Charsets.UTF_8)
+    // Derive 16-byte AES key from variant key using SHA-256
+    val keyDigest = MessageDigest.getInstance("SHA-256")
+    val aesKeyBytes = keyDigest.digest(aesKey.get().toByteArray(Charsets.UTF_8)).copyOf(16)
+
     val entries =
       inputFile.get().asFile.readLines().mapNotNull { line ->
         val trimmed = line.trim()
@@ -204,18 +273,39 @@ abstract class GenerateGpuStringsTask : DefaultTask() {
     val builder = StringBuilder()
     builder.appendLine("package com.protosdk.sdk.fingerprint.internal")
     builder.appendLine()
+    builder.appendLine("import javax.crypto.Cipher")
+    builder.appendLine("import javax.crypto.spec.GCMParameterSpec")
+    builder.appendLine("import javax.crypto.spec.SecretKeySpec")
+    builder.appendLine("import java.security.MessageDigest")
+    builder.appendLine("import java.util.Base64")
+    builder.appendLine()
     builder.appendLine("internal object GpuStringTable {")
     builder.appendLine(
-      "  internal data class Entry(val type: String, val hash: String, val payload: IntArray)",
+      "  internal data class Entry(val type: String, val hash: String, val payload: String)",
     )
     builder.appendLine("  internal fun entries(): List<Entry> = listOf(")
     entries.forEachIndexed { index, (type, value) ->
-      val encoded = encode(value, keyBytes)
+      val encoded = encryptAes(value, aesKeyBytes)
       val hashed = hashValue(value)
-      builder.append("    Entry(\"$type\", \"$hashed\", intArrayOf($encoded))")
+      builder.append("    Entry(\"$type\", \"$hashed\", \"$encoded\")")
       if (index < entries.lastIndex) builder.appendLine(",") else builder.appendLine()
     }
     builder.appendLine("  )")
+    builder.appendLine()
+    builder.appendLine("  internal fun decode(entry: Entry, key: String): String? {")
+    builder.appendLine("    return try {")
+    builder.appendLine("      val keyDigest = MessageDigest.getInstance(\"SHA-256\")")
+    builder.appendLine("      val aesKey = keyDigest.digest(key.toByteArray(Charsets.UTF_8)).copyOf(16)")
+    builder.appendLine("      val secretKey = SecretKeySpec(aesKey, \"AES\")")
+    builder.appendLine("      val data = Base64.getDecoder().decode(entry.payload)")
+    builder.appendLine("      if (data.size < 12) return null")
+    builder.appendLine("      val iv = data.copyOfRange(0, 12)")
+    builder.appendLine("      val ciphertext = data.copyOfRange(12, data.size)")
+    builder.appendLine("      val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")")
+    builder.appendLine("      cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(128, iv))")
+    builder.appendLine("      String(cipher.doFinal(ciphertext), Charsets.UTF_8)")
+    builder.appendLine("    } catch (e: Exception) { null }")
+    builder.appendLine("  }")
     builder.appendLine("}")
 
     val outputFile = outputDir.get().file("GpuStringTable.kt").asFile
@@ -223,13 +313,15 @@ abstract class GenerateGpuStringsTask : DefaultTask() {
     outputFile.writeText(builder.toString())
   }
 
-  private fun encode(value: String, key: ByteArray): String {
-    val source = value.toByteArray(Charsets.UTF_8)
-    return source
-      .mapIndexed { index, byte ->
-        (byte.toInt() xor (key[index % key.size].toInt())) and 0xFF
-      }
-      .joinToString(", ")
+  private fun encryptAes(value: String, keyBytes: ByteArray): String {
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    val secretKey = SecretKeySpec(keyBytes, "AES")
+    val iv = ByteArray(GCM_IV_LENGTH)
+    SecureRandom().nextBytes(iv)
+    cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_LENGTH, iv))
+    val ciphertext = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+    val combined = iv + ciphertext
+    return Base64.getEncoder().encodeToString(combined)
   }
 
   private fun hashValue(value: String): String {
@@ -320,7 +412,7 @@ androidComponents {
       variant.name.replaceFirstChar { ch ->
         if (ch.isLowerCase()) ch.titlecase(Locale.ROOT) else ch.toString()
       }
-    val xorKeyValue =
+    val rootKeyValue =
       UUID.nameUUIDFromBytes("${project.path}:${variant.name}".toByteArray())
         .toString()
         .replace("-", "")
@@ -352,7 +444,7 @@ androidComponents {
         description = "Generates obfuscated root strings for ${variant.name}"
         group = "build"
         inputFile.set(layout.projectDirectory.file("root_strings.txt"))
-        xorKey.set(xorKeyValue)
+        aesKey.set(rootKeyValue)
         outputDir.set(layout.buildDirectory.dir("generated/rootStrings/${variant.name}"))
       }
 
@@ -370,7 +462,7 @@ androidComponents {
         description = "Generates obfuscated emulator strings for ${variant.name}"
         group = "build"
         inputFile.set(layout.projectDirectory.file("emulator_strings.txt"))
-        xorKey.set(emulatorKeyValue)
+        aesKey.set(emulatorKeyValue)
         outputDir.set(layout.buildDirectory.dir("generated/emulatorStrings/${variant.name}"))
       }
 
@@ -388,7 +480,7 @@ androidComponents {
         description = "Generates obfuscated GPU strings for ${variant.name}"
         group = "build"
         inputFile.set(layout.projectDirectory.file("gpu_strings.txt"))
-        xorKey.set(gpuKeyValue)
+        aesKey.set(gpuKeyValue)
         outputDir.set(layout.buildDirectory.dir("generated/gpuStrings/${variant.name}"))
       }
 
@@ -404,19 +496,19 @@ androidComponents {
     val dexHashValue = project.calculateSourceHash()
     variant.buildConfigFields?.put(
       "ROOT_STRING_KEY",
-      BuildConfigField("String", "\"$xorKeyValue\"", "Variant-specific XOR key"),
+      BuildConfigField("String", "\"$rootKeyValue\"", "Variant-specific root detection key"),
     )
     variant.buildConfigFields?.put(
       "EMULATOR_STRING_KEY",
       BuildConfigField(
         "String",
         "\"$emulatorKeyValue\"",
-        "Variant-specific emulator XOR key",
+        "Variant-specific emulator detection key",
       ),
     )
     variant.buildConfigFields?.put(
       "GPU_STRING_KEY",
-      BuildConfigField("String", "\"$gpuKeyValue\"", "Variant-specific GPU XOR key"),
+      BuildConfigField("String", "\"$gpuKeyValue\"", "Variant-specific GPU detection key"),
     )
     variant.buildConfigFields?.put(
       "DEX_INTEGRITY_HASH",

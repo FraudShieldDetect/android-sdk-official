@@ -1,7 +1,6 @@
 package com.protosdk.sdk.fingerprint.internal
 
 import com.protosdk.sdk.BuildConfig
-import com.protosdk.sdk.fingerprint.nativebridge.GpuDetectionBridge
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -14,9 +13,9 @@ internal object GpuStringDecoder {
     return GpuStringTable.entries()
       .asSequence()
       .filter { it.type == type }
-      .map { entry ->
-        val decoded = GpuDetectionBridge.nativeDecodeString(entry.payload, key)
-        Pattern(decoded, entry.hash)
+      .mapNotNull { entry ->
+        val decoded = GpuStringTable.decode(entry, key)
+        if (decoded != null) Pattern(decoded, entry.hash) else null
       }
       .filter { it.value.isNotBlank() }
       .toList()

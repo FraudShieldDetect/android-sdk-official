@@ -51,7 +51,13 @@ Java_com_protosdk_sdk_fingerprint_nativebridge_RootDetectionBridge_nativeStat(
         JNIEnv* env,
         jobject /* thiz */,
         jstring path) {
+    if (path == nullptr) {
+        return JNI_FALSE;
+    }
     const char* cPath = env->GetStringUTFChars(path, nullptr);
+    if (cPath == nullptr) {
+        return JNI_FALSE;
+    }
     const bool exists = performStat(cPath);
     env->ReleaseStringUTFChars(path, cPath);
     return exists ? JNI_TRUE : JNI_FALSE;
@@ -63,7 +69,13 @@ Java_com_protosdk_sdk_fingerprint_nativebridge_RootDetectionBridge_nativeGetProp
         JNIEnv* env,
         jobject /* thiz */,
         jstring key) {
+    if (key == nullptr) {
+        return env->NewStringUTF("");
+    }
     const char* cKey = env->GetStringUTFChars(key, nullptr);
+    if (cKey == nullptr) {
+        return env->NewStringUTF("");
+    }
     char value[PROP_VALUE_MAX + 1] = {0};
     __system_property_get(cKey, value);
     env->ReleaseStringUTFChars(key, cKey);

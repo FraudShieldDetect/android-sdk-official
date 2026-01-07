@@ -86,8 +86,8 @@ bool runNeonProbe() {
     for (size_t i = 0; i < sizeof(buffer); ++i) {
         buffer[i] = static_cast<uint8_t>((i * 13) & 0xFF);
     }
-    const float* misaligned = reinterpret_cast<const float*>(buffer + 1);
-    float32x4_t vec = vld1q_f32(misaligned);
+    uint8x16_t raw = vld1q_u8(buffer + 1);
+    float32x4_t vec = vreinterpretq_f32_u8(raw);
     std::array<float, 4> tmp{};
     vst1q_f32(tmp.data(), vec);
     volatile float sum = tmp[0] + tmp[1] + tmp[2] + tmp[3];
@@ -136,7 +136,13 @@ Java_com_protosdk_sdk_fingerprint_nativebridge_EmulatorDetectionBridge_nativeSta
         JNIEnv* env,
         jobject /* thiz */,
         jstring path) {
+    if (path == nullptr) {
+        return JNI_FALSE;
+    }
     const char* cPath = env->GetStringUTFChars(path, nullptr);
+    if (cPath == nullptr) {
+        return JNI_FALSE;
+    }
     const bool exists = performStat(cPath);
     env->ReleaseStringUTFChars(path, cPath);
     return exists ? JNI_TRUE : JNI_FALSE;
@@ -147,7 +153,13 @@ Java_com_protosdk_sdk_fingerprint_nativebridge_EmulatorDetectionBridge_nativeGet
         JNIEnv* env,
         jobject /* thiz */,
         jstring key) {
+    if (key == nullptr) {
+        return env->NewStringUTF("");
+    }
     const char* cKey = env->GetStringUTFChars(key, nullptr);
+    if (cKey == nullptr) {
+        return env->NewStringUTF("");
+    }
     char value[PROP_VALUE_MAX + 1] = {0};
     __system_property_get(cKey, value);
     env->ReleaseStringUTFChars(key, cKey);
