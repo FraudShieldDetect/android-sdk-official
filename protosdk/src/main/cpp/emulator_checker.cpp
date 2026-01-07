@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <climits>
 
 #include <algorithm>
 #include <array>
@@ -179,13 +180,30 @@ Java_com_protosdk_sdk_fingerprint_nativebridge_EmulatorDetectionBridge_nativeRea
         JNIEnv* env,
         jobject /* thiz */,
         jstring path) {
+    if (path == nullptr) {
+        return env->NewStringUTF("");
+    }
     const char* cPath = env->GetStringUTFChars(path, nullptr);
-    std::string_view view(cPath);
-    if (!(view.size() >= 5 && std::strncmp(view.data(), "/proc", 5) == 0)) {
+    if (cPath == nullptr) {
+        return env->NewStringUTF("");
+    }
+
+    // Resolve canonical path to handle ".." and symlinks
+    char resolvedPath[PATH_MAX];
+    if (realpath(cPath, resolvedPath) == nullptr) {
         env->ReleaseStringUTFChars(path, cPath);
         return env->NewStringUTF("");
     }
-    const std::string content = readSmallFile(cPath);
+
+    // Strict prefix check on RESOLVED path
+    std::string_view view(resolvedPath);
+    if (view.find("/proc/") != 0) {
+        env->ReleaseStringUTFChars(path, cPath);
+        return env->NewStringUTF("");
+    }
+
+    // Read the safe resolved path, not the original input
+    const std::string content = readSmallFile(resolvedPath);
     env->ReleaseStringUTFChars(path, cPath);
     return env->NewStringUTF(content.c_str());
 }
