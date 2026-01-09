@@ -5,6 +5,7 @@ import com.protosdk.sdk.fingerprint.FingerprintData
 import com.protosdk.sdk.fingerprint.FingerprintManager
 import com.protosdk.sdk.fingerprint.FingerprintResult
 import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
+import com.protosdk.sdk.fingerprint.internal.CollectorConfigHolder
 import kotlinx.coroutines.*
 
 /**
@@ -96,6 +97,7 @@ private constructor(
   /** Applies configuration */
   private fun applyConfig(newConfig: ProtoSDKConfig) {
     this.config = newConfig
+    CollectorConfigHolder.config = newConfig
   }
 
   /** Cleans up resources */
@@ -106,7 +108,25 @@ private constructor(
 
 /** Configuration class for ProtoSDK */
 data class ProtoSDKConfig(
+  // General settings
   val enableTimeout: Boolean = true,
   val enableDebugLogging: Boolean = false,
-  val defaultTimeoutMs: Long = 10000,
+
+  // Overall collection timeout
+  val defaultTimeoutMs: Long = 10_000L,
+
+  // Per-collector timeout (fallback if collector exceeds this)
+  val collectorTimeoutMs: Long = 500L,
+
+  // Individual collector internal timeouts
+  val rootDetectionTimeoutMs: Long = 200L,
+  val emulatorDetectionTimeoutMs: Long = 300L,
+  val gpuCollectionTimeoutMs: Long = 200L,
+
+  // Emulator detection fine-tuning
+  val gpuSignalWaitMs: Long = 80L,
+  val sensorSignalWaitMs: Long = 50L,
+  val sensorCheckWindowMs: Int = 50,
+  val signalPollIntervalMs: Long = 20L,
+  val batterySampleIntervalMs: Long = 5L,
 )

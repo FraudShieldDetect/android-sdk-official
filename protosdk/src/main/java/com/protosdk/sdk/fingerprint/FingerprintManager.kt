@@ -15,6 +15,7 @@ import com.protosdk.sdk.fingerprint.collectors.RootDetectionCollector
 import com.protosdk.sdk.fingerprint.collectors.SensorInfoCollector
 import com.protosdk.sdk.fingerprint.collectors.StorageInfoCollector
 import com.protosdk.sdk.fingerprint.interfaces.FingerprintCollector
+import com.protosdk.sdk.fingerprint.internal.CollectorConfigHolder
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -139,16 +140,17 @@ private constructor(
                 }
                 Pair(name, errorData)
               } else {
-                withTimeout(3000) {
-                  // 3 second timeout per collector
+                val timeout = CollectorConfigHolder.config.collectorTimeoutMs
+                withTimeout(timeout) {
                   val data = collector.collect(context)
                   Pair(name, data)
                 }
               }
             } catch (e: TimeoutCancellationException) {
+              val timeout = CollectorConfigHolder.config.collectorTimeoutMs
               val errorData =
                 JSONObject().apply {
-                  put("error", "Collection timed out after 3000ms")
+                  put("error", "Collection timed out after ${timeout}ms")
                   put("permissionRequired", false)
                 }
               Pair(name, errorData)
@@ -187,13 +189,6 @@ private constructor(
           "mediaDrmInfo" -> mediaDrmInfo = data
         }
       }
-    }
-
-    // Validate JSON size before returning
-    try {
-      fingerprintData.getJsonSize()
-    } catch (e: IllegalStateException) {
-      throw IllegalStateException("Fingerprint data too large: ${e.message}")
     }
 
     return fingerprintData

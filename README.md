@@ -171,6 +171,38 @@ ProtoSDK.initialize(
 
 ---
 
+## Timeout Configuration
+
+ProtoSDK provides fine-grained control over collection timeouts:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `defaultTimeoutMs` | 10000 | Overall fingerprint collection timeout |
+| `collectorTimeoutMs` | 500 | Timeout per individual collector |
+| `rootDetectionTimeoutMs` | 200 | Root detection internal timeout |
+| `emulatorDetectionTimeoutMs` | 300 | Emulator detection internal timeout |
+| `gpuCollectionTimeoutMs` | 200 | GPU info collection timeout |
+| `gpuSignalWaitMs` | 80 | Wait time for GPU signals |
+| `sensorSignalWaitMs` | 50 | Wait time for sensor signals |
+| `sensorCheckWindowMs` | 50 | Native sensor polling window (ms) |
+| `signalPollIntervalMs` | 20 | Signal bus polling interval |
+| `batterySampleIntervalMs` | 5 | Battery sampling interval |
+
+Example with custom timeouts for faster collection:
+
+```kotlin
+ProtoSDK.initialize(
+  context,
+  ProtoSDKConfig(
+    defaultTimeoutMs = 5_000L,       // Faster overall timeout
+    collectorTimeoutMs = 300L,       // Faster per-collector timeout
+    sensorCheckWindowMs = 30,        // Shorter sensor check
+  )
+)
+```
+
+---
+
 ## Data Model
 
 Signals are grouped into independent buckets:
@@ -233,6 +265,28 @@ val gpuInfo = sdk.collectCollectorData("gpuInfo")
 * Payload size: < 1MB JSON
 
 Collectors run in parallel with per-collector timeouts.
+
+---
+
+## Backend Integration
+
+ProtoSDK collects metadata and creates a fingerprint on-device, but this is all done on the client side. the real value comes from server-side processing—verifying devices, scoring risk, detecting fraud patterns, and tracking behavior over time.
+
+```kotlin
+lifecycleScope.launch {
+  val result = ProtoSDK.getInstance().collectFingerprint()
+
+  if (result.success) {
+    // send to your backend
+    api.submitFingerprint(
+      fingerprint = result.fingerprint,
+      data = result.data.toJsonWithTimestamp()
+    )
+  }
+}
+```
+
+Your backend can then compare fingerprints against known devices, apply risk rules, and make trust decisions based on business context.
 
 ---
 

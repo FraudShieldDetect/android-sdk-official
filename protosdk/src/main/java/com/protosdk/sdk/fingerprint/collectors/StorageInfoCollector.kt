@@ -24,16 +24,10 @@ class StorageInfoCollector : BaseCollector() {
 
     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
     if (activityManager != null) {
-      result.collectDataPoint("ramTotalBytes") {
-        val memInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memInfo)
-        memInfo.totalMem
-      }
-      result.collectDataPoint("ramThresholdBytes") {
-        val memInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memInfo)
-        memInfo.threshold
-      }
+      val memInfo = ActivityManager.MemoryInfo()
+      activityManager.getMemoryInfo(memInfo)
+      result.collectDataPoint("ramTotalBytes") { memInfo.totalMem }
+      result.collectDataPoint("ramThresholdBytes") { memInfo.threshold }
     } else {
       result.collectDataPoint("ramError") { "activityManagerUnavailable" }
     }

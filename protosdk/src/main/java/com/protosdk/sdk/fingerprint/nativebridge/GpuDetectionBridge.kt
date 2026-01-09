@@ -26,8 +26,6 @@ object GpuDetectionBridge {
 
   external fun nativeGetComputeWorkGroupInvocations(): Int
 
-  external fun nativeRunMicroBenchmark(): Double
-
   external fun nativeCheckVulkan(): Boolean
 
   external fun nativeDecodeString(payload: IntArray, key: String): String

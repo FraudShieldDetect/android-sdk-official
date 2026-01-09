@@ -45,7 +45,7 @@ std::string readSmallFile(const char* path) {
     }
     std::string output;
     output.reserve(kMaxFileBytes);
-    char buffer[1024];
+    char buffer[4096];
     while (true) {
         const ssize_t bytes = ::read(fd, buffer, sizeof(buffer));
         if (bytes <= 0) {

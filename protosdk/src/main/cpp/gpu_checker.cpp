@@ -9,6 +9,7 @@
 #include <dlfcn.h>
 #include <vulkan/vulkan.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -191,14 +192,11 @@ std::array<jint, 3> QueryGpuMemory() {
         return values;
     }
     const auto extensions = QueryExtensions();
-    std::string joined;
-    joined.reserve(extensions.size() * 16);
-    for (const auto& entry : extensions) {
-        joined.append(entry);
-        joined.push_back(' ');
-    }
+    auto hasExt = [&](const char* name) {
+        return std::find(extensions.begin(), extensions.end(), name) != extensions.end();
+    };
 
-    if (joined.find("GL_NVX_gpu_memory_info") != std::string::npos) {
+    if (hasExt("GL_NVX_gpu_memory_info")) {
         GLint total = 0;
         GLint current = 0;
         glGetIntegerv(GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX, &total);
@@ -211,7 +209,7 @@ std::array<jint, 3> QueryGpuMemory() {
         }
     }
 
-    if (joined.find("GL_ATI_meminfo") != std::string::npos) {
+    if (hasExt("GL_ATI_meminfo")) {
         GLint freeMem[4] = {0, 0, 0, 0};
         glGetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, freeMem);
         if (freeMem[0] > 0) {
@@ -311,22 +309,6 @@ jboolean CheckVulkanSupport() {
     return supported ? JNI_TRUE : JNI_FALSE;
 }
 
-double RunMicroBenchmark() {
-    if (!EnsureGlContext()) {
-        return 0.0;
-    }
-    const int iterations = 12;
-    const auto start = std::chrono::steady_clock::now();
-    for (int i = 0; i < iterations; ++i) {
-        glClearColor(0.1f * i, 0.2f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glFinish();
-    }
-    const auto end = std::chrono::steady_clock::now();
-    const std::chrono::duration<double, std::milli> elapsed = end - start;
-    return elapsed.count() / iterations;
-}
-
 }  // namespace
 
 extern "C" {
@@ -413,13 +395,6 @@ Java_com_protosdk_sdk_fingerprint_nativebridge_GpuDetectionBridge_nativeGetCompu
         return 0;
     }
     return value;
-}
-
-JNIEXPORT jdouble JNICALL
-Java_com_protosdk_sdk_fingerprint_nativebridge_GpuDetectionBridge_nativeRunMicroBenchmark(
-        JNIEnv* /* env */,
-        jobject /* thiz */) {
-    return RunMicroBenchmark();
 }
 
 JNIEXPORT jboolean JNICALL
