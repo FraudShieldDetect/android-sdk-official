@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Debug
 import com.protosdk.sdk.fingerprint.integrity.DexIntegrityVerifier
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
+import com.protosdk.sdk.fingerprint.internal.CollectorConfigHolder
 import com.protosdk.sdk.fingerprint.internal.RootStringDecoder
 import com.protosdk.sdk.fingerprint.nativebridge.RootDetectionBridge
 import com.protosdk.sdk.fingerprint.utils.SecurityCollectorUtils
@@ -22,7 +23,7 @@ class RootDetectionCollector(
 
   override suspend fun collect(context: Context): JSONObject = withContext(Dispatchers.IO) {
     try {
-      withTimeout(200L) {
+      withTimeout(CollectorConfigHolder.config.rootDetectionTimeoutMs) {
         val integrityVerified =
           runCatching { DexIntegrityVerifier.verify(context) }.getOrDefault(false)
         safeCollect { performDetection(context, integrityVerified) }

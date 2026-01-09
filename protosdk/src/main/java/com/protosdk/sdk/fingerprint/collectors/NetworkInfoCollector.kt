@@ -4,11 +4,34 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.NetworkCapabilities
+import android.os.Build
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
 import org.json.JSONArray
 import org.json.JSONObject
 
 class NetworkInfoCollector : BaseCollector() {
+  companion object {
+    private fun getTransportTypes(): List<Pair<Int, String>> = buildList {
+      add(NetworkCapabilities.TRANSPORT_WIFI to "wifi")
+      add(NetworkCapabilities.TRANSPORT_CELLULAR to "cellular")
+      add(NetworkCapabilities.TRANSPORT_ETHERNET to "ethernet")
+      add(NetworkCapabilities.TRANSPORT_VPN to "vpn")
+      add(NetworkCapabilities.TRANSPORT_BLUETOOTH to "bluetooth")
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        add(NetworkCapabilities.TRANSPORT_WIFI_AWARE to "wifi_aware")
+      }
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+        add(NetworkCapabilities.TRANSPORT_LOWPAN to "lowpan")
+      }
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        add(NetworkCapabilities.TRANSPORT_USB to "usb")
+      }
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        add(NetworkCapabilities.TRANSPORT_SATELLITE to "satellite")
+      }
+    }
+  }
+
   override suspend fun collect(context: Context): JSONObject = safeCollect {
     val cm =
       context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
@@ -33,25 +56,15 @@ class NetworkInfoCollector : BaseCollector() {
         ?.filter { it.isNotBlank() }
         ?: emptyList()
       collectDataPoint("dnsServers") { JSONArray(dnsList) }
-      collectDataPoint("privateDnsActive") { link?.isPrivateDnsActive ?: JSONObject.NULL }
-      collectDataPoint("privateDnsServerName") { link?.privateDnsServerName ?: JSONObject.NULL }
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        collectDataPoint("privateDnsActive") { link?.isPrivateDnsActive ?: JSONObject.NULL }
+        collectDataPoint("privateDnsServerName") { link?.privateDnsServerName ?: JSONObject.NULL }
+      }
     }
   }
 
   private fun addTransports(caps: NetworkCapabilities, into: JSONArray) {
-    val transports =
-      listOf(
-        NetworkCapabilities.TRANSPORT_WIFI to "wifi",
-        NetworkCapabilities.TRANSPORT_CELLULAR to "cellular",
-        NetworkCapabilities.TRANSPORT_ETHERNET to "ethernet",
-        NetworkCapabilities.TRANSPORT_VPN to "vpn",
-        NetworkCapabilities.TRANSPORT_BLUETOOTH to "bluetooth",
-        NetworkCapabilities.TRANSPORT_LOWPAN to "lowpan",
-        NetworkCapabilities.TRANSPORT_WIFI_AWARE to "wifi_aware",
-        NetworkCapabilities.TRANSPORT_USB to "usb",
-        NetworkCapabilities.TRANSPORT_SATELLITE to "satellite",
-      )
-    transports.forEach { (id, name) -> if (caps.hasTransport(id)) into.put(name) }
+    getTransportTypes().forEach { (id, name) -> if (caps.hasTransport(id)) into.put(name) }
   }
 
   private fun LinkProperties?.isTun(): Boolean {

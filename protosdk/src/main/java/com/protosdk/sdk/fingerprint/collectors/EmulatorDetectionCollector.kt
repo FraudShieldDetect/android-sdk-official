@@ -11,6 +11,7 @@ import android.os.Debug
 import android.os.SystemClock
 import android.telephony.TelephonyManager
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
+import com.protosdk.sdk.fingerprint.internal.CollectorConfigHolder
 import com.protosdk.sdk.fingerprint.internal.EmulatorStringDecoder
 import com.protosdk.sdk.fingerprint.internal.GpuSignalBus
 import com.protosdk.sdk.fingerprint.internal.SensorSignalBus
@@ -32,7 +33,7 @@ class EmulatorDetectionCollector(
 
   override suspend fun collect(context: Context): JSONObject = withContext(Dispatchers.IO) {
     try {
-      withTimeout(300L) { safeCollect { performDetection(context) } }
+      withTimeout(CollectorConfigHolder.config.emulatorDetectionTimeoutMs) { safeCollect { performDetection(context) } }
     } catch (timeout: TimeoutCancellationException) {
       JSONObject().apply {
         put("emulatorIndicators", JSONArray())
@@ -69,8 +70,9 @@ class EmulatorDetectionCollector(
       EmulatorStringDecoder.properties().associateWith { key ->
         bridge.nativeGetProperty(key)
       }
-    val gpuSignals = awaitSignal(220L) { GpuSignalBus.latest() }
-    val sensorSignals = awaitSignal(140L) { SensorSignalBus.latest() }
+    val config = CollectorConfigHolder.config
+    val gpuSignals = awaitSignal(config.gpuSignalWaitMs, config.signalPollIntervalMs) { GpuSignalBus.latest() }
+    val sensorSignals = awaitSignal(config.sensorSignalWaitMs, config.signalPollIntervalMs) { SensorSignalBus.latest() }
     val deviceTokens = EmulatorStringDecoder.devices().map { it.lowercase(locale) }
 
     val operations = mutableListOf<() -> Unit>()
@@ -168,7 +170,7 @@ class EmulatorDetectionCollector(
     }
 
     operations += {
-      val sensorStats = bridge.nativeCheckSensors(90)
+      val sensorStats = bridge.nativeCheckSensors(CollectorConfigHolder.config.sensorCheckWindowMs)
       val sampled = sensorStats.takeIf { it.size >= 1 }?.get(0) ?: 0
       val varying = sensorStats.takeIf { it.size >= 2 }?.get(1) ?: 0
       val sensorsHealthy = sampled >= 2 && varying >= 1
@@ -290,7 +292,7 @@ class EmulatorDetectionCollector(
 
   private fun <T> awaitSignal(
     maxWaitMs: Long,
-    pollIntervalMs: Long = 10L,
+    pollIntervalMs: Long = 20L,
     fetch: () -> T?,
   ): T? {
     var result = fetch()
@@ -313,7 +315,7 @@ class EmulatorDetectionCollector(
         currentSamples += reading
       }
       if (index < 2) {
-        SystemClock.sleep(10)
+        SystemClock.sleep(CollectorConfigHolder.config.batterySampleIntervalMs)
       }
     }
     val hasVariance = currentSamples.distinct().size > 1

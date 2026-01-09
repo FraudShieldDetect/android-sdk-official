@@ -18,6 +18,35 @@ data class FingerprintData(
   var mediaDrmInfo: JSONObject = JSONObject(),
   var timestamp: Long = System.currentTimeMillis(),
 ) {
+  companion object {
+    private const val MAX_SIZE_BYTES = 1024 * 1024 // 1MB max
+  }
+
+  private fun buildBaseJson(): JSONObject = JSONObject().apply {
+    put("build", buildInfo)
+    put("device", deviceInfo)
+    put("display", displayInfo)
+    put("debug", debugInfo)
+    put("root", rootInfo)
+    put("emulator", emulatorInfo)
+    put("gpu", gpuInfo)
+    put("cpu", cpuInfo)
+    put("storage", storageInfo)
+    put("network", networkInfo)
+    put("sensors", sensorInfo)
+    put("gsf", gsfInfo)
+    put("mediaDrm", mediaDrmInfo)
+  }
+
+  private fun validateSize(json: JSONObject) {
+    val jsonString = json.toString()
+    val sizeInBytes = jsonString.toByteArray(Charsets.UTF_8).size
+    if (sizeInBytes > MAX_SIZE_BYTES) {
+      throw IllegalStateException(
+        "Fingerprint JSON too large: $sizeInBytes bytes (max: $MAX_SIZE_BYTES bytes)",
+      )
+    }
+  }
   /** function to use the most stable data to build the fingerprint hash */
   fun toStableJson(): JSONObject {
     fun JSONObject.putIfPresent(source: JSONObject, key: String) {
@@ -87,72 +116,13 @@ data class FingerprintData(
     }
   }
 
-  fun toJson(): JSONObject {
-    val json =
-      JSONObject().apply {
-        put("build", buildInfo)
-        put("device", deviceInfo)
-        put("display", displayInfo)
-        put("debug", debugInfo)
-        put("root", rootInfo)
-        put("emulator", emulatorInfo)
-        put("gpu", gpuInfo)
-        put("cpu", cpuInfo)
-        put("storage", storageInfo)
-        put("network", networkInfo)
-        put("sensors", sensorInfo)
-        put("gsf", gsfInfo)
-        put("mediaDrm", mediaDrmInfo)
-      }
+  fun toJson(): JSONObject = buildBaseJson().also { validateSize(it) }
 
-    // Check JSON size (in bytes)
-    val jsonString = json.toString()
-    val sizeInBytes = jsonString.toByteArray(Charsets.UTF_8).size
-    val maxSizeBytes = 1024 * 1024 // 1MB max
+  fun toJsonWithTimestamp(): JSONObject = buildBaseJson().apply {
+    put("timestamp", timestamp)
+  }.also { validateSize(it) }
 
-    if (sizeInBytes > maxSizeBytes) {
-      throw IllegalStateException(
-        "Fingerprint JSON too large: $sizeInBytes bytes (max: $maxSizeBytes bytes)",
-      )
-    }
-
-    return json
-  }
-
-  fun toJsonWithTimestamp(): JSONObject {
-    val json =
-      JSONObject().apply {
-        put("build", buildInfo)
-        put("device", deviceInfo)
-        put("display", displayInfo)
-        put("debug", debugInfo)
-        put("root", rootInfo)
-        put("emulator", emulatorInfo)
-        put("gpu", gpuInfo)
-        put("cpu", cpuInfo)
-        put("storage", storageInfo)
-        put("network", networkInfo)
-        put("sensors", sensorInfo)
-        put("gsf", gsfInfo)
-        put("mediaDrm", mediaDrmInfo)
-        put("timestamp", timestamp)
-      }
-
-    // Check JSON size (in bytes)
-    val jsonString = json.toString()
-    val sizeInBytes = jsonString.toByteArray(Charsets.UTF_8).size
-    val maxSizeBytes = 1024 * 1024 // 1MB max
-
-    if (sizeInBytes > maxSizeBytes) {
-      throw IllegalStateException(
-        "Fingerprint JSON too large: $sizeInBytes bytes (max: $maxSizeBytes bytes)",
-      )
-    }
-
-    return json
-  }
-
-  fun getJsonSize(): Int = toJson().toString().toByteArray(Charsets.UTF_8).size
+  fun getJsonSize(): Int = buildBaseJson().toString().toByteArray(Charsets.UTF_8).size
 }
 
 data class FingerprintResult(

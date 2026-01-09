@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import com.protosdk.sdk.fingerprint.interfaces.BaseCollector
+import com.protosdk.sdk.fingerprint.internal.CollectorConfigHolder
 import com.protosdk.sdk.fingerprint.internal.GpuSignalBus
 import com.protosdk.sdk.fingerprint.internal.GpuStringDecoder
 import com.protosdk.sdk.fingerprint.nativebridge.GpuDetectionBridge
@@ -26,7 +27,7 @@ class GpuInfoCollector : BaseCollector() {
     }
       .asCoroutineDispatcher()
 
-  private val cachingEnabled = false
+  private val cachingEnabled = true
 
   @Volatile private var cachedResult: JSONObject? = null
   private val cacheLock = Any()
@@ -48,9 +49,11 @@ class GpuInfoCollector : BaseCollector() {
 
     val result =
       try {
-        withTimeout(200L) { safeCollect { buildPayload(context) } }
+        val timeout = CollectorConfigHolder.config.gpuCollectionTimeoutMs
+        withTimeout(timeout) { safeCollect { buildPayload(context) } }
       } catch (_: TimeoutCancellationException) {
-        buildErrorJson("GPU fingerprinting timed out after 200ms")
+        val timeout = CollectorConfigHolder.config.gpuCollectionTimeoutMs
+        buildErrorJson("GPU fingerprinting timed out after ${timeout}ms")
       }
 
     if (cachingEnabled && !result.has("error")) {
@@ -122,10 +125,6 @@ class GpuInfoCollector : BaseCollector() {
       virtualizationIndicators += "missing_compute_support"
     }
 
-    if (snapshot.microBenchmarkMs > 8.0) {
-      virtualizationIndicators += "slow_gl_micro_benchmark"
-    }
-
     if (snapshot.maxTextureSize >= 16384 && systemRamMb in 1..4096) {
       virtualizationIndicators += "max_texture_outlier:${snapshot.maxTextureSize}"
     }
@@ -157,9 +156,6 @@ class GpuInfoCollector : BaseCollector() {
       confidenceScore += 0.1
     }
     if (extensionOutlier != null) {
-      confidenceScore += 0.1
-    }
-    if (snapshot.microBenchmarkMs > 8.0) {
       confidenceScore += 0.1
     }
     confidenceScore = min(1.0, confidenceScore)
@@ -255,7 +251,6 @@ class GpuInfoCollector : BaseCollector() {
     var eglConfig: IntArray = intArrayOf(),
     var maxTextureSize: Int = 0,
     var computeInvocations: Int = 0,
-    var microBenchmarkMs: Double = 0.0,
     var vulkanSupported: Boolean = false,
   )
 }
